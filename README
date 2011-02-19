@@ -1,0 +1,132 @@
+------------------------------
+pialign - Phrasal ITG Aligner
+     by Graham Neubig
+        2011-01-24
+------------------------------
+
+pialign is a package that allows you to create a phrase table and word alignments from an unaligned parallel corpus. First, make the program:
+
+$ make
+
+Then, to align a file, say we have a source language file "data/f.txt" and a target language file "data/e.txt", we can run the program as follows:
+
+$ mkdir out
+$ pialign data/e.txt data/f.txt out/align. &> out/log.txt &
+
+The program will run for a while (about 1-2 hours for 10k sentences, or 10-20 hours for 100k). Note that by default, only sentences of 40 words or less will be aligned. This can be changed by using "-maxsentlen XX" where XX is the maximum sentence length, but if this is set to a large value the program may use a large amount of memory, and the speed will drop to some extent.
+
+When the program is done running, it will output two files "out/align.1.samp" and "out/align.1.pt." align.1.samp contains the alignments (in the form of trees) created by the aligner, and align.1.pt contains a phrase table that can be used with Moses.
+
+-----------------------------
+---------- FAQ --------------
+-----------------------------
+
+Q: I want to create word alignments.
+
+A: This can be done by running the script "script/itgstats.pl" on "align.1.samp." There are three types of word alignments that you can create, many-to-many (phrase) alignments, one-to-many (block) alignments, and one-to-one (word) alignments.
+
+  many-to-many: $ script/itgstats.pl palign < out/align.1.samp > out/align.1.pal
+  one-to-many:  $ script/itgstats.pl balign < out/align.1.samp > out/align.1.bal
+  one-to-one:   $ script/itgstats.pl align < out/align.1.samp > out/align.1.wal
+
+If you want to visualize these alignments you can do so as follows:
+
+  $ script/visualize.pl data/e.txt data/f.txt out/align.1.pal > out/align.1.vis
+
+~~~
+
+Q: I want lexical reordering probabilities for Moses.
+
+A: Generating these is a two-step process. First, run the "itgstats.pl" script on the derivation file. Here, "7" is the maximum length of a phrase:
+
+  $ script/itgstats.pl lex 7 < out/align.1.samp | LC_ALL=C sort > out/align.1.ext
+
+  Second, using the "score" tool included with Moses to generate the lexical reordering table.
+
+  $ lexical-reordering/score out/align.1.ext 0.5 out/align.reorder. --model "wbe msd wbe-msd-bidirectional-fe"
+
+  The lexical reordering probabilities will be stored in TODO. Removing this dependence on Moses is planned for the future.
+
+~~~
+
+Q: I want to use lexical weighting in my phrase model.
+
+A: You will first need lexical translation probabilities for each word. These can be calculated using for IBM Model 1 using the "script/model1.pl" script. 
+
+  $ script/model1.pl data/f.txt data/e.txt > out/lex-f2e.txt
+  $ script/model1.pl data/e.txt data/f.txt > out/lex-e2f.txt
+
+Using these probabilities, you can add lexical weighting probabilities to the phrase table as follows:
+
+  $ script/lexicalize-pt.pl out/lex-f2e.txt out/lex-e2f.txt < out/align.1.pt > out/align.1.ptlex
+
+Allowing the main program to output lexical weighting probabilities is planned for the near future.
+
+-----------------------------
+--------- Options -----------
+-----------------------------
+
+~~~ Input/Output ~~~
+
+Usage: pialign [OPTIONS] EFILE FFILE PREFIX
+
+ EFILE is the english input corpus
+ FFILE is the foreign input corpus
+ PREFIX is the prefix that will be used for the output
+
+Other input:
+ -le2f         A file containing the lexicon probabilities for e2f
+ -lf2e         A file containing the lexicon probabilities for f2e
+               (These can be used with "-base m1" or "-base m1g" but are not necessary)
+
+~~~ Model Parameters ~~~
+
+ -model        Model type (hier/len/flat, default: hier)
+
+ -avgphraselen A parameter indicating the expected length of a phrase.
+               default is small (0.01) to prevent overly long alignments
+ -base         The type of base measure to use (m1g is generally best).
+               'm1g'=geometric mean of model 1, 'm1'=arithmetic mean of model 1,
+               'uni'=simple unigrams (default 'm1g')
+ -defstren     Fixed strength of the PY process (default none)
+ -defdisc      Fixed discount of the PY process (default none)
+ -nullprob     The probability of a null alignment (default 0.01)
+ -noremnull    Do not remember nulls in the phrase table
+ -termprior    The prior probability of generating a terminal (0.33)
+ -termstren    Strength of the type distribution (default 1)
+
+~~~ Phrase Table ~~~
+
+ -maxphraselen The maximum length of a minimal phrase (default 7)
+ -maxsentlen   The maximum length of sentences to be used (default 40)
+ -printmax     The maximum length of phrases included in the phrase table (default 7)
+ -printmin     The minimal length of phrases included in the phrase table (default 1)
+ -noword       Output only phrase alignments (do not force output of word alignments)
+
+~~~ Inference Parameters ~~~
+
+ -burnin       The number of burn-in iterations (default 9)
+ -histwidth    The width of the histogram pruning to use (default none)
+ -probwidth    The width of the probability beam to use (default 1e-10)
+ -samps        The number of samples to take (default 1)
+ -samprate     Take samples every samprate turns (default 1)
+ -worditers    The number of iterations to perform with a word-based model (default 0)
+
+
+-----------------------------
+---------- Misc. ------------
+-----------------------------
+
+If you are using a large corpus (100k+) and want to make the training go faster, it is probably safe to reduce the number of iterations to 5 by setting "-burnin 4," or slightly narrow the beam ("-probwidth 1e-9", possibly "1e-8").
+
+If you have boost installed, uncomment the lines at the beginning of the Makefile to include boost libraries, and uncomment "#define COMPRESS" at the beginning of definitions.h. This will make the program automatically compress the output in .gz format.
+
+-----------------------------
+---------- TODO -------------
+-----------------------------
+
+* Incorporate the computation of lexical probabilities directly into the program so the script lexicalize-pt.pl is not needed.
+* Remove the dependence on moses to generate reordering probabilities.
+* Increase the efficiency of Model 1 calculation.
+* Reduce the memory used by the phrase table by representing phrases as references to their position in the corpus (like a suffix array).
+* Distributed sampling to allow for training on larger data sets.
