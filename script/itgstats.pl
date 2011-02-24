@@ -5,18 +5,35 @@ use List::Util qw(min max);
 binmode STDIN, ":utf8";
 binmode STDOUT, ":utf8";
 
+# a script to calculate a number of statistics about ITGs
+# ./itgstats.pl TYPE [MAX_LENGTH=7] [OPTIONS]
+#
+# TYPE is the type of processing to perform
+#
+# The types of processing that can be performed are:
+#  merge: Take an ITG derivation file and merge into phrase pairs
+#  block: Take an ITG derivation file and merge into 1-many blocks
+#  lex:   Calculate the lexical reordering probabilities of each phrase
+#         pair. OPTION is the smoothing pseudo-count to add to each
+#         type of reordering (default 0.5)
+#  phrase: Build a phrase table from the alignments using maximum
+#          likelihood estimation
+#  align/palign/balign: Output word alignments in GIZA++ format using
+#         1-1 words, 1-many blocks, or many-many phrases respectively
+
 if(@ARGV < 1) {
-    print STDERR "Usage: itgstats.pl [merge|lex|phrase|block|align|palign|balign]\n";
+    print STDERR "Usage: itgstats.pl merge|block|lex|phrase|align|palign|balign [MAX_LENGTH=7] [OPTIONS]\n";
     exit 1;
 }
 
 my $TYPE = $ARGV[0];
 my $MAXLEN = $ARGV[1] ? $ARGV[1] : 7;
+my $OPT1 = $ARGV[2] ? $ARGV[2] : 0.5;
 my $MINLEN = 1;
 my $MERGE = (($TYPE eq "merge") or ($TYPE eq "palign"));
 my $BLOCK = (($TYPE eq "block") or ($TYPE eq "balign"));
 
-my (%fe);
+my (%fe, %phrases);
 
 sub findmid {
     my $c = 0;
@@ -113,28 +130,25 @@ sub markcorners {
     }
 }
 
-# print the lexical translations
-sub printlex {
+# count the lexical reordering frequencies
+sub countlex {
     my ($node, $corners) = @_;
     if($node->[0]) {
-        printlex($node->[6],$corners);
-        printlex($node->[7],$corners);
+        countlex($node->[6],$corners);
+        countlex($node->[7],$corners);
     }
     if(min($node->[3],$node->[4])>=$MINLEN and max($node->[3],$node->[4])<=$MAXLEN) {
-        my($prev, $next) = ("other","other");
-        if($corners->{"br".($node->[1]-1)."|".($node->[2]-1)}) {
-            $prev = "mono";
+        if(not $phrases{$node->[5]}) {
+            my @arr = map { $OPT1 } (1 .. 6);
+            $phrases{$node->[5]} = \@arr;
         }
-        elsif($corners->{"tr".($node->[1]-1)."|".($node->[2]+$node->[4])}) {
-            $prev = "swap";
-        }
-        if($corners->{"tl".($node->[1]+$node->[3])."|".($node->[2]+$node->[4])}) {
-            $next = "mono";
-        }
-        elsif($corners->{"bl".($node->[1]+$node->[3])."|".($node->[2]-1)}) {
-            $next = "swap";
-        }
-        print $node->[5]." ||| $prev $next\n";
+        my $arr = $phrases{$node->[5]};
+        if($corners->{"br".($node->[1]-1)."|".($node->[2]-1)})             { $arr->[0]++; }
+        elsif($corners->{"tr".($node->[1]-1)."|".($node->[2]+$node->[4])}) { $arr->[1]++; }
+        else                                                               { $arr->[2]++; }
+        if($corners->{"tl".($node->[1]+$node->[3])."|".($node->[2]+$node->[4])}) { $arr->[3]++; }
+        elsif($corners->{"bl".($node->[1]+$node->[3])."|".($node->[2]-1)})       { $arr->[4]++; }
+        else                                                                     { $arr->[5]++; }
     }
 }
 
@@ -175,7 +189,6 @@ sub printitg {
     }
 }
 
-my %phrases;
 sub countphrase {
     my $node = shift;
     if($node) {
@@ -198,7 +211,7 @@ while(<STDIN>) {
                     "tr-1|".$root->[4] => 1, "tl".$root->[3]."|".$root->[4] => 1 ); 
             markcorners($root,\%corners);
             # print join(' ',sort keys(%corners))."\n";
-            printlex($root,\%corners);
+            countlex($root,\%corners);
         }
     } elsif($TYPE =~ /(merge|block)/) {
         printitg($root);
@@ -229,5 +242,14 @@ if($TYPE eq "phrase") {
         if(min($flen,$elen)>=$MINLEN and max($flen,$elen) <= $MAXLEN) {
             print "$k ||| ".($v/$es{$e})." ".($v/$fs{$f})." ".($v/$tot)." 1 2.718\n";
         }
+    }
+}
+
+if($TYPE eq "lex") {
+    while(my ($k,$v) = each(%phrases)) {
+        my @s = ($v->[0]+$v->[1]+$v->[2],$v->[3]+$v->[4]+$v->[5]);
+        print "$k |||";
+        for(0 .. 5) { print " ".($v->[$_]/$s[int($_/3)]); };
+        print "\n";
     }
 }

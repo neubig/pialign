@@ -598,8 +598,13 @@ void PIAlign::printPhraseTable(ostream & ptos) {
                 ptos << " ||| " << jProbs[it->second]/fProbs[it->first.second] <<
                         " " << jProbs[it->second]/eProbs[it->first.first] <<
                         " " << jProbs[it->second] <<
-                        " " << dProbs[it->second] <<
-                        " " << phrasePen << endl;
+                        " " << dProbs[it->second];
+                // if we are using model one, output lexical translation probabilities as well
+                if(baseType_ != BASE_UNI) {
+                    ptos << " " << ((BaseModelOne*)base_)->phraseModelOne(estr,fstr) << 
+                            " " << ((BaseModelOne*)base_)->phraseModelOne(fstr,estr); 
+                }
+                ptos << " " << phrasePen << endl;
             }
         }
     }
