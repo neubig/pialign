@@ -37,10 +37,10 @@ cerr << " A tool for unsupervised Bayesian alignment using phrase-based ITGs" <<
 << "Options:" << endl << endl
 << "~~~ Input/Output ~~~" << endl
 << "" << endl
-<< "Usage: pialign [OPTIONS] EFILE FFILE PREFIX" << endl
+<< "Usage: pialign [OPTIONS] FFILE EFILE PREFIX" << endl
 << "" << endl
-<< " EFILE is the english input corpus" << endl
 << " FFILE is the foreign input corpus" << endl
+<< " EFILE is the english input corpus" << endl
 << " PREFIX is the prefix that will be used for the output" << endl
 << "" << endl
 << "Other input:" << endl
