@@ -1,7 +1,7 @@
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
-AC_PREREQ([2.61])
+AC_PREREQ([2.59])
 AC_INIT([pialign], [0.1.0], [neubig@ar.media.kyoto-u.ac.jp])
 AC_CONFIG_SRCDIR(src/lib/pialign.cc)
 AC_CONFIG_HEADERS([src/include/pialign/config.h])

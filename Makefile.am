@@ -1,8 +1,6 @@
-AM_CPPFLAGS = $(BOOST_CPPFLAGS) $(PTHREAD_FLAGS) 
-
 SUBDIRS = src
 
-dist_pkglibexec_SCRIPTS = \
+dist_pkglib_SCRIPTS = \
 script/aer.pl \
 script/countnull.pl \
 script/extractlex.pl \
