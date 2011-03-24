@@ -1,7 +1,7 @@
 ------------------------------
 pialign - Phrasal ITG Aligner
      by Graham Neubig
-        2011-01-24
+        2011-03-24
 ------------------------------
 
 pialign is a package that allows you to create a phrase table and word alignments from an unaligned parallel corpus. First, make the program:
