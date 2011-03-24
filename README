@@ -21,7 +21,7 @@ When the program is done running, it will output two files "out/align.1.samp" an
 ----- Details/Citation ------
 -----------------------------
 
-If you would like more details or want to cite pialign in your research, please reference:
+If you would like more detailsi about the method or want to cite pialign in your research, please reference:
 
 An Unsupervised Model for Joint Phrase Alignment and Extraction
 Graham Neubig, Taro Watanabe, Eiichiro Sumita, Shinsuke Mori, and Tatsuya Kawahara
@@ -79,6 +79,12 @@ A: The bracketed representation in the derivation file has four different types 
           inside these brackets were actually aligned together as a single
           phrase, but by default pialign forces alignments down to words to
           preserve word alignments for possible other uses.
+
+~~~
+
+Q: pialign is too slow!
+
+A: If you want a speed up at the possible small drop in alignment accuracy, you can reduce the size of the probability beam using the -probwidth option. The default is "-probwidth 1e-10" so if you set this to "-probwidth 1e-08" instead, you will likely see a significant speed up. We are also currently working on parallelization or other ways to speed up the alignment process.
           
 -----------------------------
 --------- Options -----------
@@ -134,8 +140,6 @@ Other input:
 -----------------------------
 ---------- Misc. ------------
 -----------------------------
-
-If you are using a large corpus (100k+) and want to make the training go faster, it is probably safe to reduce the number of iterations to 5 by setting "-burnin 4," or slightly narrow the beam ("-probwidth 1e-9", possibly "1e-8").
 
 If you have boost installed, uncomment the lines at the beginning of the Makefile to include boost libraries, and uncomment "#define COMPRESS" at the beginning of definitions.h. This will make the program automatically compress the output in .gz format.
 
