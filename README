@@ -4,8 +4,9 @@ pialign - Phrasal ITG Aligner
         2011-03-24
 ------------------------------
 
-pialign is a package that allows you to create a phrase table and word alignments from an unaligned parallel corpus. First, make the program:
+pialign is a package that allows you to create a phrase table and word alignments from an unaligned parallel corpus. First, configure and make the program:
 
+$ ./configure
 $ make
 
 Then, to align a file, say we have a source language file "data/f.txt" and a target language file "data/e.txt", we can run the program as follows:
@@ -85,6 +86,12 @@ A: The bracketed representation in the derivation file has four different types 
 Q: pialign is too slow!
 
 A: If you want a speed up at the possible small drop in alignment accuracy, you can reduce the size of the probability beam using the -probwidth option. The default is "-probwidth 1e-10" so if you set this to "-probwidth 1e-08" instead, you will likely see a significant speed up. We are also currently working on parallelization or other ways to speed up the alignment process.
+
+~~~
+
+Q: There is no "configure" file to build the program.
+
+A: If you checked the source directly out from the repository, you may have to run autotools before building. First, make sure autotools is installed on your computer, then run "autoreconf -i" which will prepare the configure file for you.
           
 -----------------------------
 --------- Options -----------
