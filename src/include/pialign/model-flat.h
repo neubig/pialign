@@ -1,7 +1,7 @@
 #ifndef PROB_FLAT_H__
 #define PROB_FLAT_H__
 
-#include "prob-model.h"
+#include "model-base.h"
 
 namespace pialign {
 
@@ -34,21 +34,21 @@ public:
     Prob calcTreeProb(const Span & mySpan, Prob myProb, const Span & yourSpan, Prob yourProb, int type) const {
         return typeProbs_[type]+myProb+yourProb;
     }
-    void addGen(WordId jId, const Span & mySpan, Prob prob) {
-        tCounts_[TYPE_TERM]++;
+    void addGen(WordId jId, const Span & mySpan, Prob prob, int* tCounts, WordString & jIds) {
+        tCounts[TYPE_TERM]++;
         addType(TYPE_TERM);
-        if(!isNull(mySpan) || rememberNull_) {
-            (*jIds_) = (*jIds_) + jId;
+        if(rememberNull_ || !isNull(mySpan)) {
+            jIds = jIds + jId;
             phrases_.addExisting(jId);
             addAverageDerivation(jId,phrases_.getTotal(jId),prob);
         } 
     }
 
-    void addBase(WordId jId, const Span & mySpan, Prob prob) {
-        tCounts_[TYPE_TERM]++;
+    void addBase(WordId jId, const Span & mySpan, Prob prob, int* tCounts, WordString & jIds) {
+        tCounts[TYPE_TERM]++;
         addType(TYPE_TERM);
-        if(!isNull(mySpan) || rememberNull_) {
-            (*jIds_) = (*jIds_) + jId;
+        if(rememberNull_ || !isNull(mySpan)) {
+            jIds = jIds + jId;
             phrases_.addNew(jId,-1,-1,-1);
             addAverageDerivation(jId,phrases_.getTotal(jId),prob);
         }
@@ -56,8 +56,8 @@ public:
 
     void addTree(WordId jId, WordId lId, WordId rId, 
                 const Span & jSpan, const Span & lSpan, const Span & rSpan, 
-                int type, Prob prob) {
-        tCounts_[type]++;
+                int type, Prob prob, int* tCounts, WordString & jIds) {
+        tCounts[type]++;
         addType(type);
     }
     void removeSentence(WordId head, WordString & jIds, int* counts) {

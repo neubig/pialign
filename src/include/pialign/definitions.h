@@ -29,9 +29,15 @@
 #define TYPE_TERM 0
 #define TYPE_REG 1
 #define TYPE_INV 2
+#define TYPE_GEN 3
+#define TYPE_BASE 4
 
 namespace pialign {
 
+typedef unsigned PosId;
+typedef double Prob;
+typedef int NodeId;
+typedef int WordId;
 
 class Edge {
 public:
@@ -84,6 +90,21 @@ inline bool operator==(const Span & a, const Span & b) {
     return  a.es == b.es && a.ee == b.ee && a.fs == b.fs && a.fe == b.fe;
 }
 
+class SpanNode {
+public:
+    Span span; // the span
+    SpanNode *left, *right; // the child nodes
+    int type; // the type of node that this is
+    bool add; // whether this node was actually added to the distribution
+    Prob prob; // the generative probability of this span
+
+    SpanNode(const Span & mySpan) : span(mySpan), left(0), right(0), type(0), add(true) { }
+    ~SpanNode() { 
+        if(left) delete left;
+        if(right) delete right;
+    }
+};
+
 template < class T >
 class PairHash {
 public:
@@ -95,11 +116,6 @@ public:
     }
 };
 
-
-typedef unsigned PosId;
-typedef double Prob;
-typedef int NodeId;
-typedef int WordId;
 typedef gng::GenericString<WordId> WordString;
 typedef std::vector<WordString> Corpus;
 typedef gng::SymbolSet< std::string, WordId > WordSymbolSet;
@@ -107,11 +123,22 @@ typedef gng::SymbolMap< WordString, WordId, gng::GenericStringHash<WordId> > Str
 typedef gng::SymbolMap< std::pair<WordId, WordId>, WordId, PairHash<WordId> > PairWordMap;
 typedef std::tr1::unordered_map< std::pair<WordId, WordId>, Prob, PairHash<WordId> > PairProbMap;
 typedef gng::SymbolMap< Span, int, SpanHash > SpanSymbolMap;
-typedef std::tr1::unordered_map< Span, Prob, SpanHash > SpanProbMap;
 typedef std::vector< Span > SpanSet;
 typedef std::vector< SpanSet > Agendas; 
 typedef std::pair<Prob, Span> ProbSpan;
 typedef std::vector< ProbSpan > ProbSpanSet;
+
+
+class SpanProbMap : public std::tr1::unordered_map< Span, Prob, SpanHash > {
+public:
+    Prob getProb(const Span & mySpan) const {
+        SpanProbMap::const_iterator it = find(mySpan);
+        return it == end() ? NEG_INFINITY : it->second;
+    }
+    void insertProb(const Span & mySpan, Prob myProb) {
+        insert(std::pair<Span,Prob>(mySpan,myProb));
+    }
+};
 
 // sample a single set of probabilities
 inline int sampleProbs(std::vector<Prob> vec) {

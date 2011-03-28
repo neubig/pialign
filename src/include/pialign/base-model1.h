@@ -62,7 +62,7 @@ public:
             probs[i] = probs[i] ? log(probs[i]) : NEG_INFINITY;
     }
 
-    void addBases(const WordString & e, const WordString & f, const ProbModel & mod, ParseChart & chart) {
+    void addBases(const WordString & e, const WordString & f, const ProbModel & mod, ParseChart & chart, SpanProbMap & baseChart) {
         int T = e.length(), V = f.length();
         Prob l2 = log(2);
         Prob eProb, fProb, myProb, fm1;
@@ -98,7 +98,7 @@ public:
                             std::cerr << "calcBaseProb @ "<<mySpan<<", addLogProbs("<<em1<<"+"<<fProb<<","<<fm1<<"+"<<eProb<<")+"<<poisProbs_[t-s]<<"+"<<poisProbs_[v-u]<<") == "<<myProb<<std::endl;
 #endif
                         chart.addToChart(mySpan,myProb); // add to the overall chart
-                        addToChart(mySpan,myProb);       // add to the base chart
+                        baseChart.insertProb(mySpan,myProb);       // add to the base chart
                     }
                 }
             }

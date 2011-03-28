@@ -1,7 +1,7 @@
 #ifndef PROB_HIER_H__
 #define PROB_HIER_H__
 
-#include "prob-model.h"
+#include "model-base.h"
 #include <stdexcept>
 
 namespace pialign {
@@ -31,12 +31,12 @@ public:
         return phraseFallback_+typeProbs_[type]+myProb+yourProb;
     }
 
-    void addGen(WordId jId, const Span & mySpan, Prob prob) {
+    void addGen(WordId jId, const Span & mySpan, Prob prob, int* tCounts, WordString & jIds) {
         phrases_.addExisting(jId);
         addAverageDerivation(jId,phrases_.getTotal(jId),prob);
     }
 
-    void addBase(WordId jId, const Span & mySpan, Prob prob) {
+    void addBase(WordId jId, const Span & mySpan, Prob prob, int* tCounts, WordString & jIds) {
         phrases_.addNew(jId, -1, -1, TYPE_TERM);
         addAverageDerivation(jId,phrases_.getTotal(jId),prob);
         addType(TYPE_TERM);
@@ -44,7 +44,7 @@ public:
 
     void addTree(WordId jId, WordId lId, WordId rId, 
                 const Span & jSpan, const Span & lSpan, const Span & rSpan, 
-                int type, Prob prob) {
+                int type, Prob prob, int* tCounts, WordString & jIds) {
         phrases_.addNew(jId, lId, rId, type);
         addAverageDerivation(jId,phrases_.getTotal(jId),prob);
         addType(type);
@@ -67,11 +67,6 @@ public:
     
     void printPhraseTable(const WordSymbolSet & eVocab, const WordSymbolSet & fVocab, std::ostream & ptos) {
         throw std::runtime_error("HierModel::printPhraseTable not implemented");
-    }
-
-    void setHead(WordId jId) {
-        (*jIds_) = WordString(1);
-        (*jIds_)[0] = jId;
     }
 
 };

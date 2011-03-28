@@ -4,7 +4,7 @@
 #include <vector>
 #include "definitions.h"
 #include "parse-chart.h"
-#include "prob-model.h"
+#include "model-base.h"
 
 namespace pialign {
 
@@ -18,7 +18,7 @@ protected:
     std::vector<Prob> poisProbs_;
     std::vector<Prob> unigrams_;
 
-    SpanProbMap baseChart_;
+    // SpanProbMap baseChart_;
 
     int debug_;
 
@@ -43,7 +43,7 @@ public:
     // add base probabilities for the unigram model
     //  e,f strings, logPenalty is the additional log probability added
     //  by fallbacks, etc in the model, chart is the overall chart
-    virtual void addBases(const WordString & e, const WordString & f, const ProbModel & mod, ParseChart & chart) = 0;
+    virtual void addBases(const WordString & e, const WordString & f, const ProbModel & mod, ParseChart & chart, SpanProbMap & baseChart) = 0;
 
     void trainPoisson(Prob avgLen, Prob nullProb) {
 
@@ -71,17 +71,15 @@ public:
         for(int i = eSize; i < eSize+fSize; i++) unigrams_[i] = log(sums[i]/fTot);
     }
 
-    void initialize(int eLen, int fLen) {
-        baseChart_ = SpanProbMap();    
-    }
-    void addToChart(const Span & span, Prob myProb) {
-        baseChart_.insert(std::pair<Span,Prob>(span,myProb));
-    }
-    Prob getFromChart(const Span & mySpan) {
-        SpanProbMap::const_iterator it = baseChart_.find(mySpan);
-        return it == baseChart_.end() ? NEG_INFINITY : it->second;
-
-    }
+    void initialize() { }
+//     void addToChart(const Span & span, Prob myProb) {
+//         baseChart_.insert(std::pair<Span,Prob>(span,myProb));
+//     }
+//    Prob getFromChart(const Span & mySpan) {
+//        SpanProbMap::const_iterator it = baseChart_.find(mySpan);
+//        return it == baseChart_.end() ? NEG_INFINITY : it->second;
+//
+//    }
     void setDebug(int debug) { debug_ = debug; }
     void setMaxLen(int maxLen) { maxLen_ = maxLen; }
     int getMaxLen() const { return maxLen_; }

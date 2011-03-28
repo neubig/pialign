@@ -9,9 +9,9 @@
 #include "base-model1.h"
 #include "base-unigram.h"
 
-#include "prob-hier.h"
-#include "prob-flat.h"
-#include "prob-length.h"
+#include "model-hier.h"
+#include "model-flat.h"
+#include "model-length.h"
 
 #ifdef COMPRESS_ON
 #include "compress_stream.hpp"
@@ -178,6 +178,10 @@ void PIAlign::loadConfig(int argc, const char** argv) {
 
 }
 
+double timeDifference(const timeval & s, const timeval & e) {
+    return (e.tv_sec-s.tv_sec)+(e.tv_usec-s.tv_usec)/1000000.0;
+}
+
 // load the corpus
 Corpus PIAlign::loadCorpus(string file, SymbolSet< string, WordId > & vocab, WordId boost) {
     ifstream ifs(file.c_str());
@@ -225,7 +229,7 @@ void PIAlign::loadCorpora() {
     aCorpus_ = Corpus(eCorpus_.size(), WordString());
     
     // initialize the chart
-    chart_.initialize(maxLen,maxLen);
+    chartTemp_.initialize(maxLen,maxLen);
 	model_->setMaxLen(maxLen);
 
 }
@@ -265,7 +269,12 @@ WordId getPhraseId(WordId eId, WordId fId, PairWordMap & phrases, bool add) {
 
 // remove a single sample
 void PIAlign::removeSample(int sent) {
+    // remove the sample
+    timeval tStart, tRemove;
+    gettimeofday(&tStart, NULL);
     model_->removeSentence(hCorpus_[sent], aCorpus_[sent], &tCorpus_[sent*3]);
+    gettimeofday(&tRemove, NULL);
+    timeRemove_ += timeDifference(tStart,tRemove);
 }
 
 inline Prob getModelOne(const PairProbMap & model1, WordId e, WordId f) {
@@ -291,7 +300,7 @@ vector<LabeledEdge> PIAlign::findEdges(const WordString & str, const StringWordM
 }
 
 // add the generative probabilities
-void PIAlign::addGenerativeProbs(const WordString & e, const WordString & f) {
+void PIAlign::addGenerativeProbs(const WordString & e, const WordString & f, ParseChart & chart, SpanProbMap & genChart) {
     std::vector< LabeledEdge > eEdges = findEdges(e,ePhrases_);
     std::vector< LabeledEdge > fEdges = findEdges(f,fPhrases_);
     for(int i = 0; i < (int)eEdges.size(); i++) {
@@ -305,8 +314,8 @@ void PIAlign::addGenerativeProbs(const WordString & e, const WordString & f) {
                 Span s(ee.s, ee.e, fe.s, fe.e);
                 Prob myProb = model_->calcGenProb(it->second,s);
                 if(myProb > NEG_INFINITY) {
-                    chart_.addToChart(s, myProb);
-                    genChart_.insert(SpanProbMap::value_type(s, myProb));
+                    chart.addToChart(s, myProb);
+                    genChart.insert(SpanProbMap::value_type(s, myProb));
                 }
             }
         }
@@ -314,7 +323,7 @@ void PIAlign::addGenerativeProbs(const WordString & e, const WordString & f) {
 }
 
 // add up the probabilities forward
-void PIAlign::addForwardProbs(int eLen, int fLen) {
+void PIAlign::addForwardProbs(int eLen, int fLen, ParseChart & chart) {
 
     Span yourSpan;
     Prob myProb, yourProb;
@@ -322,7 +331,7 @@ void PIAlign::addForwardProbs(int eLen, int fLen) {
     // loop through all the agendas
     for(int l = 1; l < L; l++) {
         // get the beam and trim it to the appropriate size
-        ProbSpanSet spans = chart_.getTrimmedAgenda(l,histWidth_,probWidth_);
+        ProbSpanSet spans = chart.getTrimmedAgenda(l,histWidth_,probWidth_);
         int i, spanSize = spans.size();
         // cerr << "At length "<< l<<", processing "<< spanSize << " values"<<endl;
         for(i = 0; i < spanSize; i++) {
@@ -336,9 +345,9 @@ void PIAlign::addForwardProbs(int eLen, int fLen) {
                 yourMax = (S==s?u-1:u);
                 for(U = max(u-l+s-S,0); U <= yourMax; U++) {
                     yourSpan = Span(S,s,U,u);
-                    yourProb = chart_.getFromChart(yourSpan);
+                    yourProb = chart.getFromChart(yourSpan);
                     if(yourProb > NEG_INFINITY) 
-                        chart_.addToChart(S,t,U,v,model_->calcTreeProb(mySpan,myProb,yourSpan,yourProb,TYPE_REG));
+                        chart.addToChart(S,t,U,v,model_->calcTreeProb(mySpan,myProb,yourSpan,yourProb,TYPE_REG));
                 }
 #ifdef MONOTONIC_ON
                 if(!monotonic_) {
@@ -347,9 +356,9 @@ void PIAlign::addForwardProbs(int eLen, int fLen) {
                     yourMax = (S==s?v+1:v);
                     for(U = min(v+l-s+S, fLen); U >= yourMax; U--) {
                         yourSpan = Span(S,s,v,U);
-                        yourProb = chart_.getFromChart(yourSpan);
+                        yourProb = chart.getFromChart(yourSpan);
                         if(yourProb > NEG_INFINITY)
-                            chart_.addToChart(S,t,u,U,model_->calcTreeProb(mySpan,myProb,yourSpan,yourProb,TYPE_INV));
+                            chart.addToChart(S,t,u,U,model_->calcTreeProb(mySpan,myProb,yourSpan,yourProb,TYPE_INV));
                     }
 #ifdef MONOTONIC_ON
                 }
@@ -364,9 +373,9 @@ void PIAlign::addForwardProbs(int eLen, int fLen) {
                     yourMax = (S==t?u-1:u);
                     for(U = max(u-l+S-t,0); U <= yourMax; U++) {
                         yourSpan = Span(t,S,U,u);
-                        yourProb = chart_.getFromChart(yourSpan);
+                        yourProb = chart.getFromChart(yourSpan);
                         if(yourProb > NEG_INFINITY)
-                            chart_.addToChart(s,S,U,v,model_->calcTreeProb(yourSpan,yourProb,mySpan,myProb,TYPE_INV));
+                            chart.addToChart(s,S,U,v,model_->calcTreeProb(yourSpan,yourProb,mySpan,myProb,TYPE_INV));
                     }
 #ifdef MONOTONIC_ON
                 }
@@ -375,18 +384,18 @@ void PIAlign::addForwardProbs(int eLen, int fLen) {
                 yourMax = (S==t?v+1:v);
                 for(U = min(v+l-S+t, fLen); U >= yourMax; U--) {
                     yourSpan = Span(t,S,v,U);
-                    yourProb = chart_.getFromChart(yourSpan);
+                    yourProb = chart.getFromChart(yourSpan);
                     if(yourProb > NEG_INFINITY)
-                        chart_.addToChart(s,S,u,U,model_->calcTreeProb(yourSpan,yourProb,mySpan,myProb,TYPE_REG));
+                        chart.addToChart(s,S,u,U,model_->calcTreeProb(yourSpan,yourProb,mySpan,myProb,TYPE_REG));
                 }
             }
             // set the probability of already-covered values to zero
             //  to prevent double-adding of probabilities
-            chart_.removeFromChart(s,t,u,v);
+            chart.removeFromChart(s,t,u,v);
         }
         // re-add the removed probabilities
         for(int j = 0; j < i; j++)
-            chart_[chart_.findChartPosition(spans[j].second)] = spans[j].first;
+            chart[chart.findChartPosition(spans[j].second)] = spans[j].first;
         totalBeam_ += i;
         totalBeamTimes_++;
     }
@@ -413,13 +422,8 @@ string PIAlign::printSpan(const WordString & e, const WordString & f, const Span
     return oss.str();
 }
 
-Prob PIAlign::getGenProb(const Span & mySpan) {
-    SpanProbMap::const_iterator it = genChart_.find(mySpan);
-    return it == genChart_.end() ? NEG_INFINITY : it->second;
-}
-
 // sample a span
-WordId PIAlign::sampleTree(int sent, const Span & mySpan, WordString & sentIds, bool add = true) {
+SpanNode * PIAlign::sampleTree(int sent, const Span & mySpan, WordString & sentIds, int* typeIds, const ParseChart & chart, const SpanProbMap & genChart, const SpanProbMap & baseChart, bool add = true) {
     int s=mySpan.es,t=mySpan.ee,u=mySpan.fs,v=mySpan.fe;
     const WordString & e = eCorpus_[sent], f = fCorpus_[sent];
     bool bracket = add;
@@ -436,10 +440,10 @@ WordId PIAlign::sampleTree(int sent, const Span & mySpan, WordString & sentIds, 
     // Prob myProb;
 
     // first is the generative probability
-    probs.push_back(getGenProb(mySpan));
+    probs.push_back(genChart.getProb(mySpan));
 
     // second is the base probability
-    probs.push_back(base_->getFromChart(mySpan));
+    probs.push_back(baseChart.getProb(mySpan));
 
     // remainder are pair probabilities
     Prob tProb;
@@ -447,14 +451,14 @@ WordId PIAlign::sampleTree(int sent, const Span & mySpan, WordString & sentIds, 
         for(int U = u; U <= v; U++) {
             Span qls(s,S,u,U), qrs(S,t,U,v), rls(s,S,U,v), rrs(S,t,u,U);
             if(qls.length() && qrs.length()) {
-                tProb = model_->calcTreeProb(qls,qrs,chart_,TYPE_REG);
+                tProb = model_->calcTreeProb(qls,qrs,chart,TYPE_REG);
                 if(tProb > NEG_INFINITY) { 
                     probs.push_back(tProb);
                     pairs.push_back(pair<Span,Span>(qls,qrs));
                 }
             }
             if(rls.length() && rrs.length() && !monotonic_) {
-                tProb = model_->calcTreeProb(rls,rrs,chart_,TYPE_INV);
+                tProb = model_->calcTreeProb(rls,rrs,chart,TYPE_INV);
                 if(tProb > NEG_INFINITY) { 
                     probs.push_back(tProb);
                     pairs.push_back(pair<Span,Span>(rls,rrs));
@@ -470,108 +474,134 @@ WordId PIAlign::sampleTree(int sent, const Span & mySpan, WordString & sentIds, 
     // sample the answer
     int ans = sampleLogProbs(probs,annealLevel_);
     
-    // generative or base dist
-    WordId eId = getPhraseId(eCorpus_[sent].substr(s,t-s),ePhrases_,add),
-        fId = getPhraseId(fCorpus_[sent].substr(u,v-u),fPhrases_,add),
-        jId = -1;
+    // make the span node
+    SpanNode * myNode = new SpanNode(mySpan);
+    myNode->add = add;
+    myNode->prob = probs[ans];
+    // if this is generative or base
     if(ans < 2) {
-        jId = getPhraseId(eId,fId,jointPhrases_,add);
-        if(add) {
-            if(ans == 0)
-                model_->addGen(jId,mySpan,probs[0]);
-            else
-                model_->addBase(jId, mySpan,probs[1]);
-        }
-        if(!sampleOut_ || !forceWord_ || max(mySpan.ee-mySpan.es,mySpan.fe-mySpan.fs) == 1) {
-            if(sampleOut_) printSpan(e,f,mySpan,*sampleOut_);
-            return jId;
-        }
+        // pick the type of the node
+        myNode->type = ( ans == 0 ? TYPE_GEN : TYPE_BASE );
+        // if not forcing word alignments or reached the bottom, return
+        if(!forceWord_ || max(mySpan.ee-mySpan.es,mySpan.fe-mySpan.fs) == 1)
+            return myNode;
+        // continue sampling
         add = false;
         ans = sampleLogProbs(&probs[2],probs.size()-2,annealLevel_)+2;
     }
-    else
-        bracket = false;
 
     const pair<Span,Span> & myPair = pairs[ans-2];
-    int type = (myPair.first.fe == myPair.second.fs?TYPE_REG:TYPE_INV);
-    if(sampleOut_) *sampleOut_ << (bracket?"{ ":"") << (type==TYPE_REG?"[ ":"< ");
-    WordId lId = sampleTree(sent,myPair.first,sentIds,add);
-    if(sampleOut_) *sampleOut_ << " ";
-    WordId rId = sampleTree(sent,myPair.second,sentIds,add);
-    if(sampleOut_) *sampleOut_ << (type==TYPE_REG?" ]":" >") << (bracket?" }":"");
-    
-    if(add && model_->isHierarchical()) {
-        jId = getPhraseId(eId,fId,jointPhrases_,add);
-        model_->addTree(jId,lId,rId,mySpan,myPair.first,myPair.second,type,probs[ans]);
-    }
+    myNode->type = (myPair.first.fe == myPair.second.fs?TYPE_REG:TYPE_INV); 
+    myNode->left = sampleTree(sent,myPair.first,sentIds,typeIds,chart,genChart,baseChart,add);
+    myNode->right = sampleTree(sent,myPair.second,sentIds,typeIds,chart,genChart,baseChart,add);
 
-    return jId;
+    return myNode;
 
-}
-
-double timeDifference(const timeval & s, const timeval & e) {
-    return (e.tv_sec-s.tv_sec)+(e.tv_usec-s.tv_usec)/1000000.0;
-}
+} 
 
 // add a single sentence sample
-void PIAlign::addSample(int sent) {
-    timeval tStart, tRemove, tInit, tBase, tGen, tFor, tSamp;
+SpanNode * PIAlign::buildSample(int sent, ParseChart & chart) {
+    timeval tStart, tInit, tBase, tGen, tFor, tSamp;
     const WordString & e = eCorpus_[sent], & f = fCorpus_[sent];
     Span sentSpan(0,e.length(),0,f.length());
-
-    // remove the sample
-    gettimeofday(&tStart, NULL);
-    removeSample(sent);
-    genChart_ = SpanProbMap();
     
     // initialize
-    gettimeofday(&tRemove, NULL);
-    chart_.initialize(e.length(),f.length());
-    base_->initialize(e.length(),f.length());
-    model_->initialize(e,f,chart_,aCorpus_[sent],&tCorpus_[sent*3]);
+    gettimeofday(&tStart, NULL);
+    // HERE: aCorpus_[sent],&tCorpus_[sent*3]
+    chart.initialize(e.length(),f.length());
+    SpanProbMap genChart = SpanProbMap();  // map of generative probs
+    SpanProbMap baseChart = SpanProbMap(); // map of base probs
 
     // cerr << endl << "--- SAMPLING SENTENCE "<<sent<<" ---"<<endl;
 
     gettimeofday(&tInit, NULL);
     // add the base probabilities
-    base_->addBases(e, f, *model_, chart_);
+    base_->addBases(e, f, *model_, chart, baseChart);
     gettimeofday(&tBase, NULL);
 
     // add the generative probabilities
-    addGenerativeProbs(e,f);
+    addGenerativeProbs(e,f,chart,genChart);
     gettimeofday(&tGen, NULL);
 
     // add the probabilities forward
     int eLen = e.length(), fLen = f.length();
-    addForwardProbs(eLen, fLen);
-    Prob myLik = chart_.getFromChart(sentSpan)+model_->calcSentProb(sentSpan);
+    addForwardProbs(eLen, fLen, chart);
+    Prob myLik = chart.getFromChart(sentSpan)+model_->calcSentProb(sentSpan);
     if(myLik <= NEG_INFINITY) {
         probWidth_ += log(10); histWidth_ *= 2;
         cerr << "WARNING: parsing failed! loosening beam to hist="<<histWidth_<<", prob="<<probWidth_<<endl;
-        chart_.setDebug(1); base_->setDebug(1); model_->setDebug(1);
-        addSample(sent);
-        chart_.setDebug(0); base_->setDebug(0); model_->setDebug(0);
+        chart.setDebug(1); base_->setDebug(1); model_->setDebug(1);
+        SpanNode * head = buildSample(sent,chart);
+        chart.setDebug(0); base_->setDebug(0); model_->setDebug(0);
         probWidth_ -= log(10); histWidth_ /= 2;
-        return;
+        return head;
     }
     likelihood_ += myLik;
     // cerr << "likelihood = "<<getFromChart(0,currELen_,0,currFLen_)<<endl;
     gettimeofday(&tFor, NULL);
     
     // sample backward probs and add sample
-    hCorpus_[sent] = sampleTree(sent,Span(0,eLen,0,fLen),aCorpus_[sent],true);
-    if(sampleOut_) *sampleOut_ << endl;
+    SpanNode * head = sampleTree(sent,Span(0,eLen,0,fLen),aCorpus_[sent],&tCorpus_[sent*3],chart, genChart, baseChart,true);
 
     gettimeofday(&tSamp, NULL);
 
-    timeRemove_ += timeDifference(tStart,tRemove);
-    timeInit_ += timeDifference(tRemove,tInit);
+    timeInit_ += timeDifference(tStart,tInit);
     timeBase_ += timeDifference(tInit,tBase);
     timeGen_ += timeDifference(tBase,tGen);
     timeFor_ += timeDifference(tGen,tFor);
     timeSamp_ += timeDifference(tFor,tSamp);
-    timeAll_ += timeDifference(tStart,tSamp);
 
+    return head;
+
+}
+
+// add a sample to the distribution
+WordId PIAlign::addSample(const WordString & e, const WordString & f, const SpanNode * myNode, int* tCounts, WordString & sentIds) {
+    if(!myNode->add) return -1;
+    const Span & mySpan = myNode->span;
+    int s=mySpan.es,t=mySpan.ee,u=mySpan.fs,v=mySpan.fe;
+
+    // add the children if necessary
+    WordId lId = -1, rId = -1, eId = -1, fId = -1, jId = -1;
+    if(myNode->left) {
+        lId = addSample(e,f,myNode->left,tCounts,sentIds);
+        rId = addSample(e,f,myNode->right,tCounts,sentIds);
+    }
+
+    // add to the phrase distribution if necessary
+    if(myNode->type == TYPE_GEN || myNode->type == TYPE_BASE || model_->isHierarchical()) {
+        eId = getPhraseId(e.substr(s,t-s),ePhrases_,true);
+        fId = getPhraseId(f.substr(u,v-u),fPhrases_,true);
+        jId = getPhraseId(eId,fId,jointPhrases_,true);
+    }
+    if(myNode->type == TYPE_GEN)
+        model_->addGen(jId,mySpan,myNode->prob,tCounts,sentIds);
+    else if(myNode->type == TYPE_BASE)
+        model_->addBase(jId,mySpan,myNode->prob,tCounts,sentIds);
+    else
+        model_->addTree(jId,lId,rId,mySpan,myNode->left->span,myNode->right->span,myNode->type,myNode->prob,tCounts,sentIds);
+    return jId;
+}
+
+// print a single sample in tree format
+void PIAlign::printSample(const WordString & e, const WordString & f, const SpanNode * myNode) {
+
+    // if there are no children, print the phrase
+    if(!myNode->left) 
+        printSpan(e,f,myNode->span,*sampleOut_);
+    else {
+        // bracket if this is the final value generated from the actual distribution
+        bool bracket = (myNode->add && myNode->left && !myNode->left->add);
+        // check whether the f spans are in order or reversed
+        bool ordered = (myNode->left->span.fe == myNode->right->span.fs);
+        // print
+        *sampleOut_ << (bracket?"{ ":"") << (ordered?"[ ":"< ");
+        printSample(e,f,myNode->left);
+        *sampleOut_ << " ";
+        printSample(e,f,myNode->right);
+        *sampleOut_ << (ordered?" ]":" >") << (bracket?" }":"");
+    }
+        
 }
 
 inline vector<WordString> invertPhraseDic(const StringWordMap & dic) {
@@ -671,11 +701,15 @@ void PIAlign::train() {
         for(int s = 0; s < (int)eCorpus_.size(); s++) {
             if((eCorpus_[s].length()*fCorpus_[s].length())!=0 && (int)max(eCorpus_[s].length(),fCorpus_[s].length()) <= currMaxLen) {
                 words += eCorpus_[s].length()+fCorpus_[s].length();
-                addSample(s);
+                removeSample(s);              // remove the current sample from the distribution
+                model_->initializeBuffers();  // cache commonly used probability values
+                SpanNode * head = buildSample(s,chartTemp_); // build the sample tree
+                hCorpus_[s] = addSample(eCorpus_[s],fCorpus_[s],head,&tCorpus_[s*3],aCorpus_[s]);  // add the sample
+                if(sampleOut_) printSample(eCorpus_[s],fCorpus_[s],head);
+                delete head;
                 if(++sents % 100 == 0) cerr << "\r" << sents;
             }
-            else if(onSample_)
-                *sampleOut_ << endl;
+            if(sampleOut_) *sampleOut_ << endl;
         }
        cerr << "\r Sentences Sampled: "<<sents<<endl;
 
@@ -703,6 +737,7 @@ void PIAlign::train() {
         model_->printStats(cerr);
         cerr << " Likelihood="<< likelihood_/words <<endl;       
         cerr << " Phrases: e="<<ePhrases_.size()<<", f="<<fPhrases_.size()<<", j="<<jointPhrases_.size()<<endl;
+        timeAll_ = timeRemove_+timeInit_+timeBase_+timeGen_+timeFor_+timeSamp_;
         cerr << " Time="<<timeAll_<<"s (r="<<timeRemove_<<", i="<<timeInit_<<", b="<<timeBase_<<", g="<<timeGen_<<", f="<<timeFor_<<", s="<<timeSamp_<<")"<<endl;
         cerr << " Avg. Beam="<<(double)totalBeam_/totalBeamTimes_<<endl;
 

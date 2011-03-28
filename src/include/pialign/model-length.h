@@ -1,7 +1,7 @@
 #ifndef PROB_LENGTH_H__
 #define PROB_LENGTH_H__
 
-#include "prob-model.h"
+#include "model-base.h"
 #include <stdexcept>
 
 namespace pialign {
@@ -63,14 +63,14 @@ public:
             phraseIdxs_.resize(jId+1);
         return (phraseIdxs_[jId] = index);
     }
-    void addGen(WordId jId, const Span & mySpan, Prob prob) {
+    void addGen(WordId jId, const Span & mySpan, Prob prob, int* tCounts, WordString & jIds) {
         int idx = saveIdx(jId,mySpan.length()-1);
         // std::cerr << "addGen("<<jId<<") --> "<<idx<<std::endl;
         sepPhrases_[saveIdx(jId,mySpan.length()-1)].addExisting(jId);
         addAverageDerivation(jId,sepPhrases_[idx].getTotal(jId),prob);
     }
 
-    void addBase(WordId jId, const Span & mySpan, Prob prob) {
+    void addBase(WordId jId, const Span & mySpan, Prob prob, int* tCounts, WordString & jIds) {
         int idx = saveIdx(jId,mySpan.length()-1);
         // std::cerr << "addBase("<<jId<<") --> "<<idx<<std::endl;
         sepPhrases_[idx].addNew(jId,-1,-1,TYPE_TERM);
@@ -80,7 +80,7 @@ public:
 
     void addTree(WordId jId, WordId lId, WordId rId, 
                 const Span & jSpan, const Span & lSpan, const Span & rSpan, 
-                int type, Prob prob) {
+                int type, Prob prob, int* tCounts, WordString & jIds) {
         int idx = saveIdx(jId,jSpan.length()-1);
         // std::cerr << "addTree("<<jId<<") --> "<<idx<<std::endl;
         sepPhrases_[idx].addNew(jId, lId, rId, type);

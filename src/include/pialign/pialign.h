@@ -4,7 +4,7 @@
 #include "pydist.h"
 #include "dirichletdist.h"
 #include "base-measure.h"
-#include "prob-model.h"
+#include "model-base.h"
 #include "parse-chart.h"
 #include "gng/string.h"
 #include "gng/symbol-set.h"
@@ -63,9 +63,7 @@ protected:
     bool onSample_; // whether we are currently calculating a sample or not
     std::vector<Prob> patternBuffer_; // a buffer holding the log probabilities of each pattern type
     std::vector<Prob> poisProbs_; // a buffer holding the log probabilities of the Poisson dist
-    ParseChart chart_; // the chart of the current probabilities
-    SpanProbMap genChart_; // the chart of the current probabilities from
-                           //  the generative distribution
+    ParseChart chartTemp_; // the chart of the current probabilities
 
                            //  the base distribution
     std::ostream *sampleOut_, *phraseOut_; // the file to write to
@@ -73,7 +71,11 @@ protected:
     int currEMultiplier_; // the current lengths of e and f
 
     // corpora 
-    Corpus eCorpus_, fCorpus_, aCorpus_;
+    // English and French corpora
+    Corpus eCorpus_, fCorpus_;
+    // corpus of the joint pairs used in each sentence
+    Corpus aCorpus_;
+    // corpora of the types of non-terminals and heads
     std::vector<int> tCorpus_, hCorpus_;
 
     // vocabs
@@ -144,20 +146,18 @@ public:
     std::vector<Prob> spanModelOne(const WordString & e, const WordString & f);
     void addFlatBases(const WordString & e, const WordString & f);
 
-    // chart access
-    Prob getGenProb(const Span & mySpan);
-
     // find all edges in a sentence
     std::vector<LabeledEdge> findEdges(const WordString & str, const StringWordMap & dict);
 
     // generative
-    void addGenerativeProbs(const WordString & e, const WordString & f);
+    void addGenerativeProbs(const WordString & e, const WordString & f, ParseChart & chart, SpanProbMap & genChart);
 
     // add forward probabilities
-    void addForwardProbs(int eLen, int fLen);
+    void addForwardProbs(int eLen, int fLen, ParseChart & chart);
 
-    // do the actual sampling and adding
-    WordId sampleTree(int sent, const Span & mySpan, WordString & ids, bool viterbi);
+    // do the actual sampling
+    SpanNode * sampleTree(int sent, const Span & mySpan, WordString & sentIds, int* typeIds, const ParseChart & chart, const SpanProbMap & genChart, const SpanProbMap & baseChart, bool add);
+    // WordId sampleTree(int sent, const Span & mySpan, WordString & ids, int* tCounts, const ParseChart & chart, const SpanProbMap & genChart, const SpanProbMap & baseChart, bool add);
     
     // print a span
     void printSpan(const WordString & e, const WordString & f, const Span & mySpan, std::ostream & out, const char* phraseSep = " ||| ", const char* wordSep = " ", const char* phraseBeg = "((( ", const char* phraseEnd = " )))");
@@ -165,7 +165,9 @@ public:
 
     // *** sample algorithms
     void removeSample(int s);
-    void addSample(int s);
+    SpanNode * buildSample(int s, ParseChart & chart);
+    WordId addSample(const WordString & e, const WordString & f, const SpanNode * myNode, int* tCounts, WordString & sentIds);
+    void printSample(const WordString & e, const WordString & f, const SpanNode * myNode);
 
     // print the phrase table
     void printPhraseTable(std::ostream & os);

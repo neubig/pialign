@@ -12,7 +12,7 @@ public:
 
     BaseUnigram() : BaseMeasure() { }
 
-    void addBases(const WordString & e, const WordString & f, const ProbModel & mod, ParseChart & chart) {
+    void addBases(const WordString & e, const WordString & f, const ProbModel & mod, ParseChart & chart, SpanProbMap & baseChart) {
         int T = e.length(), V = f.length();
         Prob eProb, fProb, myProb;
         for(int s = 0; s <= T; s++) {
@@ -29,7 +29,7 @@ public:
                         myProb = mod.calcBaseProb(mySpan, fProb+eProb+poisProbs_[t-s]+poisProbs_[v-u]);
                         // std::cerr << "calcBaseProb("<<fProb<<"+"<<eProb<<"+"<<poisProbs_[t-s]<<"+"<<poisProbs_[v-u]<<") == "<<myProb<<std::endl;
                         chart.addToChart(mySpan,myProb); // add to the overall chart
-                        addToChart(mySpan,myProb);       // add to the base chart
+                        baseChart.insertProb(mySpan,myProb);       // add to the base chart
                     }
                 }
             }
