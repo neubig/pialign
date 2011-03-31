@@ -23,19 +23,7 @@ public:
 		
 	}
 	
-	void setMaxLen(int maxLen) {
-        sepPhrases_ = std::vector< PyDist< WordId,PySparseIndex<WordId> > >(maxLen*2, PyDist< WordId,PySparseIndex<WordId> >(1.0,0.95));
-        sepFor_ = std::vector< DirichletDist<int> >(maxLen*2,DirichletDist<int>(1.0,2)) ;
-        sepTerm_ = std::vector< DirichletDist<int> >(maxLen*2,DirichletDist<int>(1.0,2)); 
-        sepType_ = std::vector< std::vector<Prob> >(maxLen*2,std::vector<Prob>(3,0));
-        sepFallbacks_ = std::vector<Prob>(maxLen*2,0);
-		sepSplits_ = std::vector<Prob>(maxLen*2);
-        for(int i = 0; i < maxLen*2; i++) {
-            sepPhrases_[i].setRecursive(false);
-            sepSplits_[i] = -1*log(std::max(i,1));
-        }
-        sentPen_ = -1*log(maxLen*2);
-    }
+	void setMaxLen(int maxLen);
     
     Prob calcSentProb(const Span & mySpan) const { return sentPen_; }
     bool isHierarchical() { return true; }
@@ -63,57 +51,43 @@ public:
             phraseIdxs_.resize(jId+1);
         return (phraseIdxs_[jId] = index);
     }
-    void addGen(WordId jId, const Span & mySpan, Prob prob, int* tCounts, WordString & jIds) {
-        int idx = saveIdx(jId,mySpan.length()-1);
-        // std::cerr << "addGen("<<jId<<") --> "<<idx<<std::endl;
-        sepPhrases_[saveIdx(jId,mySpan.length()-1)].addExisting(jId);
-        addAverageDerivation(jId,sepPhrases_[idx].getTotal(jId),prob);
-    }
 
-    void addBase(WordId jId, const Span & mySpan, Prob prob, int* tCounts, WordString & jIds) {
-        int idx = saveIdx(jId,mySpan.length()-1);
-        // std::cerr << "addBase("<<jId<<") --> "<<idx<<std::endl;
-        sepPhrases_[idx].addNew(jId,-1,-1,TYPE_TERM);
-        addAverageDerivation(jId,sepPhrases_[idx].getTotal(jId),prob);
-        addType(TYPE_TERM,idx);
-    }
+    // void addGen(WordId jId, const Span & mySpan, Prob prob) {
+    //     int idx = saveIdx(jId,mySpan.length()-1);
+    //     // std::cerr << "addGen("<<jId<<") --> "<<idx<<std::endl;
+    //     sepPhrases_[idx].addExisting(jId);
+    //     addAverageDerivation(jId,sepPhrases_[idx].getTotal(jId),prob);
+    // }
 
-    void addTree(WordId jId, WordId lId, WordId rId, 
-                const Span & jSpan, const Span & lSpan, const Span & rSpan, 
-                int type, Prob prob, int* tCounts, WordString & jIds) {
-        int idx = saveIdx(jId,jSpan.length()-1);
-        // std::cerr << "addTree("<<jId<<") --> "<<idx<<std::endl;
-        sepPhrases_[idx].addNew(jId, lId, rId, type);
-        addAverageDerivation(jId,sepPhrases_[idx].getTotal(jId),prob);
-        addType(type,idx);
-    }
+    // void addBase(WordId jId, const Span & mySpan, Prob prob) {
+    //     int idx = saveIdx(jId,mySpan.length()-1);
+    //     // std::cerr << "addBase("<<jId<<") --> "<<idx<<std::endl;
+    //     sepPhrases_[idx].addNew(jId,-1,-1,TYPE_TERM);
+    //     addAverageDerivation(jId,sepPhrases_[idx].getTotal(jId),prob);
+    //     addType(TYPE_TERM,idx);
+    // }
+
+    // void addTree(WordId jId, WordId lId, WordId rId, 
+    //             const Span & jSpan, const Span & lSpan, const Span & rSpan, 
+    //             int type, Prob prob) {
+    //     int idx = saveIdx(jId,jSpan.length()-1);
+    //     // std::cerr << "addTree("<<jId<<") --> "<<idx<<std::endl;
+    //     sepPhrases_[idx].addNew(jId, lId, rId, type);
+    //     addAverageDerivation(jId,sepPhrases_[idx].getTotal(jId),prob);
+    //     addType(type,idx);
+    // }
     
-    void removeSentence(WordId head, WordString & jIds, int* counts) {
-        if(head == -1)
-            return;
-        // std::cerr << "removeSentence: head="<<head<<","<<phraseIdxs_[head]<<std::endl;
-        int idx = phraseIdxs_[head];
-        // std::cerr << "removeSentence("<<head<<") --> "<<idx<<std::endl;
-        PyDist< WordId,PySparseIndex<WordId> > & dist = sepPhrases_[idx];
-        dist.remove(head);
-        if(dist.isRemovedTable()) {
-            const PyTable<WordId> & table = dist.getLastTable();
-            removeType(table.type,idx);
-            removeSentence(table.right,jIds,counts);
-            removeSentence(table.left,jIds,counts);
-        }
+    void addSentence(const WordString & e, const WordString & f, SpanNode* node, StringWordMap & ePhrases, StringWordMap & fPhrases, PairWordMap & pairs);
+
+    void removePhrasePair(WordId jId);
+
+    void removeSentence(const SpanNode* node) {
+        if(!node) return;
+        removePhrasePair(node->phraseid);
     }
     
     void initialize(const WordString & e, const WordString & f, 
-            ParseChart & chart, WordString & jIds, int* tCounts) {
-        int len = e.length()+f.length();
-        for(int i = 1; i < len; i++) {
-            sepFallbacks_[i] = log(sepPhrases_[i].getFallbackProb());
-            sepType_[i][0] = log(sepTerm_[i].getProb(0));
-            sepType_[i][1] = log(sepTerm_[i].getProb(1)*sepFor_[i].getProb(0));
-            sepType_[i][2] = log(sepTerm_[i].getProb(1)*sepFor_[i].getProb(1));
-        }
-    }
+            ParseChart & chart, WordString & jIds, int* tCounts);
     
     void sampleParameters(Prob defStren, Prob defDisc) {
         for(int i = 0; i < (int)sepPhrases_.size(); i++) {
@@ -123,38 +97,9 @@ public:
         }
     }
 
-    virtual void printStats(std::ostream &out) const {
-        out << " s =";
-        for(int i = 0; i < (int)sepPhrases_.size(); i++) 
-            out<<" "<<sepPhrases_[i].getStrength();
-        out << std::endl << " d =";
-        for(int i = 0; i < (int)sepPhrases_.size(); i++)
-            out<<" "<<sepPhrases_[i].getDiscount();
-        out << std::endl << " t =";
-        for(int i = 0; i < (int)sepPhrases_.size(); i++)
-            out<<" "<<exp(sepType_[i][0])<<"/"<<exp(sepType_[i][1])<<"/"<<exp(sepType_[i][2]);
-        out << std::endl;
-    }
+    virtual void printStats(std::ostream &out) const;
 
-
-    void calcPhraseTable(const PairWordMap & jPhrases, std::vector<Prob> & eProbs, std::vector<Prob> & fProbs, std::vector<Prob> & jProbs, std::vector<Prob> & dProbs) {
-        Prob myProb;
-        for(PairWordMap::const_iterator it = jPhrases.begin(); it != jPhrases.end(); it++) {
-            int idx = phraseIdxs_[it->second];
-            if(idx || rememberNull_) {
-                myProb = sepPhrases_[idx].getProb(it->second,0);
-                if(myProb != 0.0) {
-                    if((int)jProbs.size() <= it->second) jProbs.resize(it->second+1,0);
-                    jProbs[it->second] = myProb;
-                    if((int)eProbs.size() <= it->first.first) eProbs.resize(it->first.first+1,0);
-                    eProbs[it->first.first] += myProb;
-                    if((int)fProbs.size() <= it->first.second) fProbs.resize(it->first.second+1,0);
-                    fProbs[it->first.second] += myProb;
-                }
-            }
-        }
-        dProbs = derivations_;
-    }
+    void calcPhraseTable(const PairWordMap & jPhrases, std::vector<Prob> & eProbs, std::vector<Prob> & fProbs, std::vector<Prob> & jProbs, std::vector<Prob> & dProbs);
 
     inline void addType(WordId id, int idx) {
         if(id == 0)

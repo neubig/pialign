@@ -17,7 +17,6 @@ protected:
     //  exist (necessary when loading trimmed GIZA++ probabilities, etc.)
 #define MIN_MODEL1_PROB 1e-10
 
-    std::vector<Prob> eComb_, fComb_;
     PairProbMap conds_;
     bool geometric_;
 
@@ -26,14 +25,14 @@ public:
     BaseModelOne() : BaseMeasure(), geometric_(false) { }
 
     // get the conditional probabilitiy
-    Prob getCond(WordId e, WordId f) {
+    Prob getCond(WordId e, WordId f) const {
         PairProbMap::const_iterator it = conds_.find(std::pair<WordId,WordId>(e,f));
         return it != conds_.end() ? it->second : MIN_MODEL1_PROB;
     }
 
     // calculate combined values of P(e_i|f_{j,j+l-1}) and store them in
     // ret[i][l][j]
-    void combineBases(const WordString & e, const WordString & f, std::vector<Prob> & probs) {
+    void combineBases(const WordString & e, const WordString & f, std::vector<Prob> & probs) const {
         int I = e.length(), J = f.length(), myMax = I*J*(maxLen_+1);
         if((int)probs.size() < myMax) probs.resize(myMax);
         for(int i = 0; i < I; i++) {
@@ -62,12 +61,13 @@ public:
             probs[i] = probs[i] ? log(probs[i]) : NEG_INFINITY;
     }
 
-    void addBases(const WordString & e, const WordString & f, const ProbModel & mod, ParseChart & chart, SpanProbMap & baseChart) {
+    void addBases(const WordString & e, const WordString & f, const ProbModel & mod, ParseChart & chart, SpanProbMap & baseChart) const {
         int T = e.length(), V = f.length();
         Prob l2 = log(2);
         Prob eProb, fProb, myProb, fm1;
         std::vector<Prob> em1s((V+1)*(maxLen_+1));
-        combineBases(e,f,eComb_); combineBases(f,e,fComb_);
+        std::vector<Prob> eComb, fComb;
+        combineBases(e,f,eComb); combineBases(f,e,fComb);
         for(int s = 0; s <= T; s++) {
             eProb = 0;
             fill(em1s.begin(),em1s.end(),0.0);
@@ -80,11 +80,11 @@ public:
                     for(int v = (s==t?u+1:u); v <= actV; v++) {
                         if(u != v) {
                             fProb += unigrams_[f[v-1]];
-                            fm1 += fComb_[(v-1)*T*(maxLen_+1)+(t-s)*T+s];
+                            fm1 += fComb[(v-1)*T*(maxLen_+1)+(t-s)*T+s];
                         }
                         Prob em1 = 0;
                         if(s != t) 
-                            em1 = (em1s[v*(maxLen_+1)+v-u] += eComb_[(t-1)*V*(maxLen_+1)+(v-u)*V+u]);
+                            em1 = (em1s[v*(maxLen_+1)+v-u] += eComb[(t-1)*V*(maxLen_+1)+(v-u)*V+u]);
                         Span mySpan(s,t,u,v);
                         // add model one probabilities 
                         if(geometric_) {

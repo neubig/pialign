@@ -37,7 +37,9 @@ public:
     inline void addToChart(int s, int t, int u, int v, Prob p, int idx, int len) {
 #ifdef DEBUG_ON
         if(len == 0)
-            throw std::runtime_error("ParseChart Attempted to add an empty span");
+            throw std::runtime_error("ParseChart attempted to add an empty span");
+        if(p != p)
+            throw std::runtime_error("ParseChart attempted to add nan value");
 #endif
         if((*this)[idx] <= NEG_INFINITY) {
             agendas_[len-1].push_back(Span(s,t,u,v));

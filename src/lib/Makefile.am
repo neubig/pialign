@@ -1,4 +1,4 @@
-PIACPP = pialign.cc
+PIACPP = pialign.cc model-length.cc model-hier.cc model-flat.cc
 
 AM_CPPFLAGS = -I$(srcdir)/../include
 

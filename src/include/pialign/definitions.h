@@ -2,7 +2,7 @@
 #define DEFINITIONS_H__
 
 // define this to perform checks and print debugging info
-// #define DEBUG_ON
+#define DEBUG_ON
 // define this to perform viterbi pushing of forward probabilities
 //  this is much faster, but may reduce accuracy
 // #define VITERBI_ON
@@ -94,11 +94,12 @@ class SpanNode {
 public:
     Span span; // the span
     SpanNode *left, *right; // the child nodes
+    WordId phraseid; // the id of this phrase
     int type; // the type of node that this is
     bool add; // whether this node was actually added to the distribution
     Prob prob; // the generative probability of this span
 
-    SpanNode(const Span & mySpan) : span(mySpan), left(0), right(0), type(0), add(true) { }
+    SpanNode(const Span & mySpan) : span(mySpan), left(0), right(0), phraseid(-1), type(0), add(true), prob(0) { }
     ~SpanNode() { 
         if(left) delete left;
         if(right) delete right;
