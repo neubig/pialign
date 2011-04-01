@@ -83,8 +83,8 @@ cerr << " A tool for unsupervised Bayesian alignment using phrase-based ITGs" <<
 << " -samprate     Take samples every samprate turns (default 1)" << endl
 << " -worditers    The number of iterations to perform with a word-based model (default 0)" << endl
 << " -noshuffle    Don't shuffle the order of the sentences" << endl
-<< " -batchlen     The number of sentences to process in a single batch" << endl << endl
-<< " -threads      The number of threads to use (must be <= -batchlen)" << endl << endl << endl;
+<< " -batchlen     The number of sentences to process in a single batch" << endl
+<< " -threads      The number of threads to use (must be <= -batchlen)" << endl << endl;
     if(err)
         cerr << endl << "Error: " << err << endl;
     exit(1);

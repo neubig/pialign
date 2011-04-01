@@ -16,7 +16,8 @@ AC_CONFIG_FILES([
 
 AM_INIT_AUTOMAKE(pialign, 0.1.0)
 
-AM_DISABLE_SHARED
+# Uncomment to disable shared libraries (for example, for debugging)
+# AM_DISABLE_SHARED
 
 # Checks for programs.
 AC_PROG_LIBTOOL
@@ -24,11 +25,11 @@ AC_PROG_CXX
 AC_PROG_CC
 
 AC_LANG_CPLUSPLUS
+LDFLAGS="$LDFLAGS -lpthread"
 
 # Checks for libraries.
 
 AC_SYS_LARGEFILE
-LDFLAGS="$LDFLAGS -lpthread"
 
 # # Boost libraries...
 # orig_CPPFLAGS="$CPPFLAGS"
