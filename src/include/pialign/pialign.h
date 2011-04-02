@@ -197,8 +197,8 @@ public:
     SpanNode * sampleTree(int sent, const Span & mySpan, const ParseChart & chart, const SpanProbMap & genChart, const SpanProbMap & baseChart, bool add) const;
     
     // print a span
-    void printSpan(const WordString & e, const WordString & f, const Span & mySpan, std::ostream & out, const char* phraseSep = " ||| ", const char* wordSep = " ", const char* phraseBeg = "((( ", const char* phraseEnd = " )))");
-    std::string printSpan(const WordString & e, const WordString & f, const Span & mySpan, const char* phraseSep = " ||| ", const char* wordSep = " ",  const char* phraseBeg = "((( ", const char* phraseEnd = " )))");
+    void printSpan(const WordString & e, const WordString & f, const Span & mySpan, std::ostream & out, const char* phraseSep = " ||| ", const char* wordSep = " ", const char* phraseBeg = "((( ", const char* phraseEnd = " )))") const;
+    std::string printSpan(const WordString & e, const WordString & f, const Span & mySpan, const char* phraseSep = " ||| ", const char* wordSep = " ",  const char* phraseBeg = "((( ", const char* phraseEnd = " )))") const;
 
     // *** sample algorithms
     void removeSample(int s);

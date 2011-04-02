@@ -412,7 +412,7 @@ void PIAlign::addForwardProbs(int eLen, int fLen, ParseChart & chart, Prob pWidt
     }
 }
 
-void PIAlign::printSpan(const WordString & e, const WordString & f, const Span & mySpan, ostream & out, const char* phraseSep, const char* wordSep, const char* phraseBeg, const char* phraseEnd) {
+void PIAlign::printSpan(const WordString & e, const WordString & f, const Span & mySpan, ostream & out, const char* phraseSep, const char* wordSep, const char* phraseBeg, const char* phraseEnd) const {
     // print if necessary
     out << phraseBeg;
     for(int i = mySpan.es; i < mySpan.ee; i++) {
@@ -427,7 +427,7 @@ void PIAlign::printSpan(const WordString & e, const WordString & f, const Span &
     }
     out << phraseEnd;
 }
-string PIAlign::printSpan(const WordString & e, const WordString & f, const Span & mySpan, const char* phraseSep, const char* wordSep,  const char* phraseBeg, const char* phraseEnd) {
+string PIAlign::printSpan(const WordString & e, const WordString & f, const Span & mySpan, const char* phraseSep, const char* wordSep,  const char* phraseBeg, const char* phraseEnd) const {
     ostringstream oss;
     printSpan(e,f,mySpan,oss,phraseSep,wordSep,phraseBeg,phraseEnd);
     return oss.str();
@@ -438,14 +438,17 @@ SpanNode * PIAlign::sampleTree(int sent, const Span & mySpan, const ParseChart &
     int s=mySpan.es,t=mySpan.ee,u=mySpan.fs,v=mySpan.fe;
     const WordString & e = eCorpus_[sent], f = fCorpus_[sent];
     bool bracket = add;
-#ifdef DEBUG_ON
-    // cerr << "sampleTree("<<mySpan<<",f="<<f.length()<<",e="<<e.length()<<") == "<<printSpan(e,f,mySpan)<<endl;
-    if(mySpan.length() == 0)
-        throw runtime_error("SampleTree attempted to add an empty span");
-#endif
-
     // reserve the probabilities
     int maxSize = (t-s+1)*(v-u+1);
+    
+#ifdef DEBUG_ON
+    // cerr << "sampleTree("<<mySpan<<",f="<<f.length()<<",e="<<e.length()<<") == "<<printSpan(e,f,mySpan)<<endl;
+    if(mySpan.length() <= 0)
+        throw runtime_error("SampleTree attempted to add an empty span");
+    if(maxSize <= 0)
+        throw runtime_error("Maximum size less than or equal to zero");
+#endif
+    
     vector<Prob> probs; probs.reserve(maxSize+2);
     vector< pair<Span,Span> > pairs; pairs.reserve(maxSize);
     // Prob myProb;
@@ -493,8 +496,8 @@ SpanNode * PIAlign::sampleTree(int sent, const Span & mySpan, const ParseChart &
     if(ans < 2) {
         // pick the type of the node
         myNode->type = ( ans == 0 ? TYPE_GEN : TYPE_BASE );
-        // if not forcing word alignments or reached the bottom, return
-        if(!forceWord_ || max(mySpan.ee-mySpan.es,mySpan.fe-mySpan.fs) == 1)
+        // if not forcing word alignments, reached the bottom, or cannot proceed due to trimming, return
+        if(!forceWord_ || max(mySpan.ee-mySpan.es,mySpan.fe-mySpan.fs) == 1 || probs.size() == 2)
             return myNode;
         // continue sampling
         add = false;
@@ -699,7 +702,7 @@ void PIAlign::train() {
         onSample_ = untilNext-- <= 0;
 
         cerr << "Iter "<<iter++<<" started";
-        if(onSample_) cerr << ", sample "<<sampNum;
+        if(onSample_) cerr << ", sample "<<sampNum+1;
         cerr << endl;
         
         // main loop, sample all values
