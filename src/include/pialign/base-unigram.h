@@ -12,7 +12,7 @@ public:
 
     BaseUnigram() : BaseMeasure() { }
 
-    void addBases(const WordString & e, const WordString & f, const ProbModel & mod, ParseChart & chart, SpanProbMap & baseChart) {
+    void addBases(const WordString & e, const WordString & f, const ProbModel & mod, ParseChart & chart, SpanProbMap & baseChart) const {
         int T = e.length(), V = f.length();
         Prob eProb, fProb, myProb;
         for(int s = 0; s <= T; s++) {

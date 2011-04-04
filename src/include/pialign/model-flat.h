@@ -34,39 +34,10 @@ public:
     Prob calcTreeProb(const Span & mySpan, Prob myProb, const Span & yourSpan, Prob yourProb, int type) const {
         return typeProbs_[type]+myProb+yourProb;
     }
-    void addGen(WordId jId, const Span & mySpan, Prob prob, int* tCounts, WordString & jIds) {
-        tCounts[TYPE_TERM]++;
-        addType(TYPE_TERM);
-        if(rememberNull_ || !isNull(mySpan)) {
-            jIds = jIds + jId;
-            phrases_.addExisting(jId);
-            addAverageDerivation(jId,phrases_.getTotal(jId),prob);
-        } 
-    }
 
-    void addBase(WordId jId, const Span & mySpan, Prob prob, int* tCounts, WordString & jIds) {
-        tCounts[TYPE_TERM]++;
-        addType(TYPE_TERM);
-        if(rememberNull_ || !isNull(mySpan)) {
-            jIds = jIds + jId;
-            phrases_.addNew(jId,-1,-1,-1);
-            addAverageDerivation(jId,phrases_.getTotal(jId),prob);
-        }
-    }
+    void addSentence(const WordString & e, const WordString & f, SpanNode* node, StringWordMap & ePhrases, StringWordMap & fPhrases, PairWordMap & pairs);
 
-    void addTree(WordId jId, WordId lId, WordId rId, 
-                const Span & jSpan, const Span & lSpan, const Span & rSpan, 
-                int type, Prob prob, int* tCounts, WordString & jIds) {
-        tCounts[type]++;
-        addType(type);
-    }
-    void removeSentence(WordId head, WordString & jIds, int* counts) {
-        for(int i = 0; i < (int)jIds.length(); i++) phrases_.remove(jIds[i]);
-        jIds = WordString();
-        for(int i = 0; i < 3; i++) 
-            for( ; counts[i] != 0; counts[i]--) 
-                removeType(i);
-    }
+    void removeSentence(const SpanNode* node);
 
 };
 

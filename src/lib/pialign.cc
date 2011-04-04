@@ -5,7 +5,6 @@
 #include <cmath>
 #include <sys/time.h>
 
-
 #include "base-model1.h"
 #include "base-unigram.h"
 
@@ -82,7 +81,10 @@ cerr << " A tool for unsupervised Bayesian alignment using phrase-based ITGs" <<
 << " -probwidth    The width of the probability beam to use (default 1e-10)" << endl
 << " -samps        The number of samples to take (default 1)" << endl
 << " -samprate     Take samples every samprate turns (default 1)" << endl
-<< " -worditers    The number of iterations to perform with a word-based model (default 0)" << endl << endl;
+<< " -worditers    The number of iterations to perform with a word-based model (default 0)" << endl
+<< " -noshuffle    Don't shuffle the order of the sentences" << endl
+<< " -batchlen     The number of sentences to process in a single batch" << endl
+<< " -threads      The number of threads to use (must be <= -batchlen)" << endl << endl;
     if(err)
         cerr << endl << "Error: " << err << endl;
     exit(1);
@@ -105,6 +107,7 @@ void PIAlign::loadConfig(int argc, const char** argv) {
             else if(!strcmp(argv[i],"-probwidth"))      probWidth_ = atof(argv[++i]);
             else if(!strcmp(argv[i],"-defdisc"))        defDisc_ = atof(argv[++i]);
             else if(!strcmp(argv[i],"-defstren"))       defStren_ = atof(argv[++i]);
+            else if(!strcmp(argv[i],"-noshuffle"))      shuffle_ = false;
             else if(!strcmp(argv[i],"-noword"))         forceWord_ = false;
             else if(!strcmp(argv[i],"-noremnull"))      rememberNull = false;
             else if(!strcmp(argv[i],"-monotonic"))      monotonic_ = true;
@@ -112,6 +115,8 @@ void PIAlign::loadConfig(int argc, const char** argv) {
             else if(!strcmp(argv[i],"-babysteplen"))    babyStepLen_ = atoi(argv[++i]);
             else if(!strcmp(argv[i],"-annealsteps"))    annealSteps_ = atoi(argv[++i]);
             else if(!strcmp(argv[i],"-annealsteplen"))  annealStepLen_ = atoi(argv[++i]);
+            else if(!strcmp(argv[i],"-batchlen"))       batchLen_ = atoi(argv[++i]);
+            else if(!strcmp(argv[i],"-threads"))        numThreads_ = atoi(argv[++i]);
             else if(!strcmp(argv[i],"-worditers"))      wordIters_ = atoi(argv[++i]);
             else if(!strcmp(argv[i],"-le2f"))           le2fFile_ = argv[++i];
             else if(!strcmp(argv[i],"-lf2e"))           lf2eFile_ = argv[++i];
@@ -176,6 +181,11 @@ void PIAlign::loadConfig(int argc, const char** argv) {
 #endif
     probWidth_ = log(probWidth_);
 
+    if(batchLen_ < 1)
+        dieOnHelp("Batch length must be at least 1");
+    if(numThreads_ > batchLen_)
+        dieOnHelp("The number of threads must be <= the batch length");
+
 }
 
 double timeDifference(const timeval & s, const timeval & e) {
@@ -224,12 +234,15 @@ void PIAlign::loadCorpora() {
     cerr << "Loaded corpus: "<<total<<"/"<<eCorpus_.size()<<" sentences used"<<endl;
     
     // allocate other corpora
-    tCorpus_ = vector<int>(eCorpus_.size()*3,0);
-    hCorpus_ = vector<int>(eCorpus_.size(),-1);
+    nCorpus_ = vector<SpanNode*>(eCorpus_.size(),0);
     aCorpus_ = Corpus(eCorpus_.size(), WordString());
     
-    // initialize the chart
-    chartTemp_.initialize(maxLen,maxLen);
+    // initialize the charts
+    buildJobs_.resize(numThreads_);
+    for(int i = 0; i < numThreads_; i++) {
+        buildJobs_[i].chart.initialize(maxLen,maxLen);
+        buildJobs_[i].pialign = this;
+    }
 	model_->setMaxLen(maxLen);
 
 }
@@ -270,11 +283,9 @@ WordId getPhraseId(WordId eId, WordId fId, PairWordMap & phrases, bool add) {
 // remove a single sample
 void PIAlign::removeSample(int sent) {
     // remove the sample
-    timeval tStart, tRemove;
-    gettimeofday(&tStart, NULL);
-    model_->removeSentence(hCorpus_[sent], aCorpus_[sent], &tCorpus_[sent*3]);
-    gettimeofday(&tRemove, NULL);
-    timeRemove_ += timeDifference(tStart,tRemove);
+    model_->removeSentence(nCorpus_[sent]);
+    delete nCorpus_[sent];
+    nCorpus_[sent] = 0;
 }
 
 inline Prob getModelOne(const PairProbMap & model1, WordId e, WordId f) {
@@ -283,8 +294,7 @@ inline Prob getModelOne(const PairProbMap & model1, WordId e, WordId f) {
 }
 
 // find all active phrases in a string
-// TODO: change this to use Tries
-vector<LabeledEdge> PIAlign::findEdges(const WordString & str, const StringWordMap & dict) {
+vector<LabeledEdge> PIAlign::findEdges(const WordString & str, const StringWordMap & dict) const {
     int T = str.length();
     int maxLen = (modelType_==MODEL_FLAT?maxPhraseLen_:T);
     vector<LabeledEdge> ret;    
@@ -300,7 +310,7 @@ vector<LabeledEdge> PIAlign::findEdges(const WordString & str, const StringWordM
 }
 
 // add the generative probabilities
-void PIAlign::addGenerativeProbs(const WordString & e, const WordString & f, ParseChart & chart, SpanProbMap & genChart) {
+void PIAlign::addGenerativeProbs(const WordString & e, const WordString & f, ParseChart & chart, SpanProbMap & genChart) const {
     std::vector< LabeledEdge > eEdges = findEdges(e,ePhrases_);
     std::vector< LabeledEdge > fEdges = findEdges(f,fPhrases_);
     for(int i = 0; i < (int)eEdges.size(); i++) {
@@ -323,7 +333,7 @@ void PIAlign::addGenerativeProbs(const WordString & e, const WordString & f, Par
 }
 
 // add up the probabilities forward
-void PIAlign::addForwardProbs(int eLen, int fLen, ParseChart & chart) {
+void PIAlign::addForwardProbs(int eLen, int fLen, ParseChart & chart, Prob pWidth, int hWidth, JobDetails & jd) const {
 
     Span yourSpan;
     Prob myProb, yourProb;
@@ -331,7 +341,7 @@ void PIAlign::addForwardProbs(int eLen, int fLen, ParseChart & chart) {
     // loop through all the agendas
     for(int l = 1; l < L; l++) {
         // get the beam and trim it to the appropriate size
-        ProbSpanSet spans = chart.getTrimmedAgenda(l,histWidth_,probWidth_);
+        ProbSpanSet spans = chart.getTrimmedAgenda(l,hWidth,pWidth);
         int i, spanSize = spans.size();
         // cerr << "At length "<< l<<", processing "<< spanSize << " values"<<endl;
         for(i = 0; i < spanSize; i++) {
@@ -396,12 +406,13 @@ void PIAlign::addForwardProbs(int eLen, int fLen, ParseChart & chart) {
         // re-add the removed probabilities
         for(int j = 0; j < i; j++)
             chart[chart.findChartPosition(spans[j].second)] = spans[j].first;
-        totalBeam_ += i;
-        totalBeamTimes_++;
+        
+        jd.totalBeam += i;
+        jd.totalBeamTimes++;
     }
 }
 
-void PIAlign::printSpan(const WordString & e, const WordString & f, const Span & mySpan, ostream & out, const char* phraseSep, const char* wordSep, const char* phraseBeg, const char* phraseEnd) {
+void PIAlign::printSpan(const WordString & e, const WordString & f, const Span & mySpan, ostream & out, const char* phraseSep, const char* wordSep, const char* phraseBeg, const char* phraseEnd) const {
     // print if necessary
     out << phraseBeg;
     for(int i = mySpan.es; i < mySpan.ee; i++) {
@@ -416,25 +427,28 @@ void PIAlign::printSpan(const WordString & e, const WordString & f, const Span &
     }
     out << phraseEnd;
 }
-string PIAlign::printSpan(const WordString & e, const WordString & f, const Span & mySpan, const char* phraseSep, const char* wordSep,  const char* phraseBeg, const char* phraseEnd) {
+string PIAlign::printSpan(const WordString & e, const WordString & f, const Span & mySpan, const char* phraseSep, const char* wordSep,  const char* phraseBeg, const char* phraseEnd) const {
     ostringstream oss;
     printSpan(e,f,mySpan,oss,phraseSep,wordSep,phraseBeg,phraseEnd);
     return oss.str();
 }
 
 // sample a span
-SpanNode * PIAlign::sampleTree(int sent, const Span & mySpan, WordString & sentIds, int* typeIds, const ParseChart & chart, const SpanProbMap & genChart, const SpanProbMap & baseChart, bool add = true) {
+SpanNode * PIAlign::sampleTree(int sent, const Span & mySpan, const ParseChart & chart, const SpanProbMap & genChart, const SpanProbMap & baseChart, bool add = true) const {
     int s=mySpan.es,t=mySpan.ee,u=mySpan.fs,v=mySpan.fe;
     const WordString & e = eCorpus_[sent], f = fCorpus_[sent];
     bool bracket = add;
-#ifdef DEBUG_ON
-    // cerr << "sampleTree("<<mySpan<<",f="<<f.length()<<",e="<<e.length()<<") == "<<printSpan(e,f,mySpan)<<endl;
-    if(mySpan.length() == 0)
-        throw runtime_error("SampleTree attempted to add an empty span");
-#endif
-
     // reserve the probabilities
     int maxSize = (t-s+1)*(v-u+1);
+    
+#ifdef DEBUG_ON
+    // cerr << "sampleTree("<<mySpan<<",f="<<f.length()<<",e="<<e.length()<<") == "<<printSpan(e,f,mySpan)<<endl;
+    if(mySpan.length() <= 0)
+        throw runtime_error("SampleTree attempted to add an empty span");
+    if(maxSize <= 0)
+        throw runtime_error("Maximum size less than or equal to zero");
+#endif
+    
     vector<Prob> probs; probs.reserve(maxSize+2);
     vector< pair<Span,Span> > pairs; pairs.reserve(maxSize);
     // Prob myProb;
@@ -482,8 +496,8 @@ SpanNode * PIAlign::sampleTree(int sent, const Span & mySpan, WordString & sentI
     if(ans < 2) {
         // pick the type of the node
         myNode->type = ( ans == 0 ? TYPE_GEN : TYPE_BASE );
-        // if not forcing word alignments or reached the bottom, return
-        if(!forceWord_ || max(mySpan.ee-mySpan.es,mySpan.fe-mySpan.fs) == 1)
+        // if not forcing word alignments, reached the bottom, or cannot proceed due to trimming, return
+        if(!forceWord_ || max(mySpan.ee-mySpan.es,mySpan.fe-mySpan.fs) == 1 || probs.size() == 2)
             return myNode;
         // continue sampling
         add = false;
@@ -492,22 +506,26 @@ SpanNode * PIAlign::sampleTree(int sent, const Span & mySpan, WordString & sentI
 
     const pair<Span,Span> & myPair = pairs[ans-2];
     myNode->type = (myPair.first.fe == myPair.second.fs?TYPE_REG:TYPE_INV); 
-    myNode->left = sampleTree(sent,myPair.first,sentIds,typeIds,chart,genChart,baseChart,add);
-    myNode->right = sampleTree(sent,myPair.second,sentIds,typeIds,chart,genChart,baseChart,add);
+    myNode->left = sampleTree(sent,myPair.first,chart,genChart,baseChart,add);
+    myNode->right = sampleTree(sent,myPair.second,chart,genChart,baseChart,add);
 
     return myNode;
 
-} 
+}
 
 // add a single sentence sample
-SpanNode * PIAlign::buildSample(int sent, ParseChart & chart) {
+SpanNode * PIAlign::buildSample(int sent, ParseChart & chart, Prob pWidth, int hWidth, JobDetails & jd) const {
     timeval tStart, tInit, tBase, tGen, tFor, tSamp;
     const WordString & e = eCorpus_[sent], & f = fCorpus_[sent];
     Span sentSpan(0,e.length(),0,f.length());
+
+#ifdef DEBUG_ON
+    if(e.length() == 0 || f.length() == 0) 
+        throw runtime_error("Attempted to sample zero-length sentence");
+#endif
     
     // initialize
     gettimeofday(&tStart, NULL);
-    // HERE: aCorpus_[sent],&tCorpus_[sent*3]
     chart.initialize(e.length(),f.length());
     SpanProbMap genChart = SpanProbMap();  // map of generative probs
     SpanProbMap baseChart = SpanProbMap(); // map of base probs
@@ -524,82 +542,53 @@ SpanNode * PIAlign::buildSample(int sent, ParseChart & chart) {
     gettimeofday(&tGen, NULL);
 
     // add the probabilities forward
+    SpanNode* head;
     int eLen = e.length(), fLen = f.length();
-    addForwardProbs(eLen, fLen, chart);
+    addForwardProbs(eLen, fLen, chart, pWidth, hWidth, jd);
     Prob myLik = chart.getFromChart(sentSpan)+model_->calcSentProb(sentSpan);
     if(myLik <= NEG_INFINITY) {
-        probWidth_ += log(10); histWidth_ *= 2;
         cerr << "WARNING: parsing failed! loosening beam to hist="<<histWidth_<<", prob="<<probWidth_<<endl;
-        chart.setDebug(1); base_->setDebug(1); model_->setDebug(1);
-        SpanNode * head = buildSample(sent,chart);
-        chart.setDebug(0); base_->setDebug(0); model_->setDebug(0);
-        probWidth_ -= log(10); histWidth_ /= 2;
+        chart.setDebug(1); // base_->setDebug(1); model_->setDebug(1);
+        head = buildSample(sent,chart,pWidth+log(10),hWidth*2,jd);
+        chart.setDebug(0); // base_->setDebug(0); model_->setDebug(0);
         return head;
     }
-    likelihood_ += myLik;
+    jd.likelihood += myLik;
     // cerr << "likelihood = "<<getFromChart(0,currELen_,0,currFLen_)<<endl;
     gettimeofday(&tFor, NULL);
     
     // sample backward probs and add sample
-    SpanNode * head = sampleTree(sent,Span(0,eLen,0,fLen),aCorpus_[sent],&tCorpus_[sent*3],chart, genChart, baseChart,true);
+    head = sampleTree(sent,Span(0,eLen,0,fLen),chart,genChart,baseChart,true);
 
     gettimeofday(&tSamp, NULL);
 
-    timeInit_ += timeDifference(tStart,tInit);
-    timeBase_ += timeDifference(tInit,tBase);
-    timeGen_ += timeDifference(tBase,tGen);
-    timeFor_ += timeDifference(tGen,tFor);
-    timeSamp_ += timeDifference(tFor,tSamp);
+    jd.timeInit += timeDifference(tStart,tInit);
+    jd.timeBase += timeDifference(tInit,tBase);
+    jd.timeGen += timeDifference(tBase,tGen);
+    jd.timeFor += timeDifference(tGen,tFor);
+    jd.timeSamp += timeDifference(tFor,tSamp);
 
     return head;
 
 }
 
-// add a sample to the distribution
-WordId PIAlign::addSample(const WordString & e, const WordString & f, const SpanNode * myNode, int* tCounts, WordString & sentIds) {
-    if(!myNode->add) return -1;
-    const Span & mySpan = myNode->span;
-    int s=mySpan.es,t=mySpan.ee,u=mySpan.fs,v=mySpan.fe;
-
-    // add the children if necessary
-    WordId lId = -1, rId = -1, eId = -1, fId = -1, jId = -1;
-    if(myNode->left) {
-        lId = addSample(e,f,myNode->left,tCounts,sentIds);
-        rId = addSample(e,f,myNode->right,tCounts,sentIds);
-    }
-
-    // add to the phrase distribution if necessary
-    if(myNode->type == TYPE_GEN || myNode->type == TYPE_BASE || model_->isHierarchical()) {
-        eId = getPhraseId(e.substr(s,t-s),ePhrases_,true);
-        fId = getPhraseId(f.substr(u,v-u),fPhrases_,true);
-        jId = getPhraseId(eId,fId,jointPhrases_,true);
-    }
-    if(myNode->type == TYPE_GEN)
-        model_->addGen(jId,mySpan,myNode->prob,tCounts,sentIds);
-    else if(myNode->type == TYPE_BASE)
-        model_->addBase(jId,mySpan,myNode->prob,tCounts,sentIds);
-    else
-        model_->addTree(jId,lId,rId,mySpan,myNode->left->span,myNode->right->span,myNode->type,myNode->prob,tCounts,sentIds);
-    return jId;
-}
-
 // print a single sample in tree format
-void PIAlign::printSample(const WordString & e, const WordString & f, const SpanNode * myNode) {
+void PIAlign::printSample(const WordString & e, const WordString & f, const SpanNode * myNode, ostream & sampleOut) {
 
     // if there are no children, print the phrase
     if(!myNode->left) 
-        printSpan(e,f,myNode->span,*sampleOut_);
+        printSpan(e,f,myNode->span,sampleOut);
     else {
         // bracket if this is the final value generated from the actual distribution
         bool bracket = (myNode->add && myNode->left && !myNode->left->add);
         // check whether the f spans are in order or reversed
         bool ordered = (myNode->left->span.fe == myNode->right->span.fs);
         // print
-        *sampleOut_ << (bracket?"{ ":"") << (ordered?"[ ":"< ");
-        printSample(e,f,myNode->left);
-        *sampleOut_ << " ";
-        printSample(e,f,myNode->right);
-        *sampleOut_ << (ordered?" ]":" >") << (bracket?" }":"");
+        sampleOut << (bracket?"{ ":"") << (ordered?"[ ":"< ");
+        printSample(e,f,myNode->left,sampleOut);
+        sampleOut << " ";
+        printSample(e,f,myNode->right,sampleOut);
+        sampleOut << (ordered?" ]":" >") << (bracket?" }":"");
     }
         
 }
@@ -640,6 +629,28 @@ void PIAlign::printPhraseTable(ostream & ptos) {
     }
 }
 
+template <class T>
+void shuffle(vector<T> & vec) {
+    int vecSize = vec.size(), pos;
+    T temp;
+    for(int i = vecSize - 1; i > 0; i--) {
+        pos = discreteUniformSample(i+1);
+        temp = vec[pos];
+        vec[pos] = vec[i];
+        vec[i] = temp;
+    }
+}
+
+// sample all the values in the batch
+void* buildSamples(void* ptr) {
+    BuildJob* job = (BuildJob*)ptr;
+    PIAlign * pia = job->pialign;
+    for(vector<int>::iterator s = job->begin; s != job->end; s++) {
+        SpanNode* node = pia->buildSample(*s,job->chart,pia->getProbWidth(),pia->getHistWidth(),job->details);
+        pia->setNode(*s,node);
+    }
+}
+
 // do the whole training
 void PIAlign::train() {
     
@@ -649,17 +660,18 @@ void PIAlign::train() {
 
     // initialize parameters
     model_->sampleParameters(defStren_,defDisc_);
+    vector<int> sentOrder;
+    JobDetails jd;
+    timeval tStart, tEnd;
     
     // iterate until we have enough samples
     while(sampNum < samples_) {
 
-        // set various variables to zero
-        likelihood_ = 0;
-        timeRemove_ = 0; timeInit_ = 0; timeBase_ = 0; timeGen_ = 0;
-        timeFor_ = 0; timeSamp_ = 0; timeAll_ = 0;
-        totalBeam_ = 0, totalBeamTimes_ = 0;
+        // reset various variables
+        jd.reset();
+        gettimeofday(&tStart, NULL);
         // fill(derivations_.begin(), derivations_.end(), 0.0);
-        
+
         // finish word iterations
         if(iter == wordIters_+1) {
             base_->setMaxLen(maxPhraseLen_);
@@ -671,58 +683,98 @@ void PIAlign::train() {
             currAnneal++;
             untilNextAnneal = annealStepLen_;
         }
-        if(--untilNextBaby == 0) {
+        if(--untilNextBaby == 0 || sentOrder.size() == 0) {
             currBaby++;
             untilNextBaby = babyStepLen_;
+            int currMaxLen = min(maxSentLen_, currBaby*maxSentLen_/babySteps_);
+            // find the samples that need to be done
+            for(int s = 0; s < (int)eCorpus_.size(); s++) {
+                if((eCorpus_[s].length()*fCorpus_[s].length())!=0 && (int)max(eCorpus_[s].length(),fCorpus_[s].length()) <= currMaxLen) {
+                    sentOrder.push_back(s);
+                }
+            }
         }
-        int currMaxLen = min(maxSentLen_, currBaby*maxSentLen_/babySteps_);
+
+        // shuffle the sentence order if necessary
+        if(shuffle_) shuffle(sentOrder);
+
         annealLevel_ = 1.0/max(1,annealSteps_-currAnneal);
         onSample_ = untilNext-- <= 0;
-        sampleOut_ = 0;
+
+        cerr << "Iter "<<iter++<<" started";
+        if(onSample_) cerr << ", sample "<<sampNum+1;
+        cerr << endl;
+        
+        // main loop, sample all values
+        int sents=0,lastSent=0,s;
+        for(int beginSent = 0; beginSent < (int)sentOrder.size(); beginSent += batchLen_) {
+            vector<int>::iterator beginIter = sentOrder.begin()+beginSent;
+            int myBatch = min(batchLen_,(int)sentOrder.size()-beginSent);
+            vector<int>::iterator endIter = beginIter+myBatch;
+            // remove the samples in the current batch and count the words
+            timeval tStart, tRemove;
+            gettimeofday(&tStart, NULL);
+            for(vector<int>::iterator s = beginIter; s != endIter; s++) {
+                jd.words += eCorpus_[*s].length()+fCorpus_[*s].length();
+                removeSample(*s);
+                sents++;
+            }
+            gettimeofday(&tRemove, NULL);
+            jd.timeRemove += timeDifference(tStart,tRemove);
+            // cache commonly used probability values
+            model_->initializeBuffers();
+            // sample all the values in the batch
+            for(int i = 0; i < numThreads_; i++) {
+                buildJobs_[i].details.reset();
+                buildJobs_[i].begin = beginIter + i*myBatch/numThreads_;
+                buildJobs_[i].end = beginIter + (i+1)*myBatch/numThreads_;
+                pthread_create( &buildJobs_[i].thread, NULL, buildSamples, (void*) &buildJobs_[i]);
+            }
+            for(int i = 0; i < numThreads_; i++) {
+                pthread_join(buildJobs_[i].thread, NULL);
+                jd += buildJobs_[i].details;
+            }
+            // for(vector<int>::iterator s = beginIter; s != endIter; s++)
+            //     nCorpus_[*s] = buildSample(*s,chartTemp_);
+            // add all the samples
+            for(vector<int>::iterator s = beginIter; s != endIter; s++) {
+                model_->addSentence(eCorpus_[*s],fCorpus_[*s],nCorpus_[*s],ePhrases_,fPhrases_,jointPhrases_);
+            }
+            if(sents / 100 != lastSent) {
+                cerr << "\r" << sents;
+                lastSent = sents/100;
+            }
+        }
+        cerr << "\r Sentences Sampled: "<<sents<<endl;
+        gettimeofday(&tEnd, NULL);
+        jd.timeAll = timeDifference(tStart,tEnd);
+
+        // print the files if we're on a sample
         if(onSample_) {
             untilNext = sampRate_-1;
             ++sampNum;
+            // print the samples
             ostringstream name;
             name << prefix_ << sampNum << ".samp";
 #ifdef COMPRESS_ON
             name << ".gz";
-            sampleOut_ = new utils::compress_ostream(name.str().c_str(),65536);
+            utils::compress_ostream sampleOut(name.str().c_str(),65536);
 #else
-            sampleOut_ = new ofstream(name.str().c_str());
+            ofstream sampleOut(name.str().c_str());
 #endif
-        }
-        likelihood_ = 0;
-       cerr << "Iter "<<iter++<<" started: a="<<annealLevel_<<", ms="<<currMaxLen<<", mp="<<base_->getMaxLen();
-        if(onSample_) cerr << ", sample "<<sampNum;
-       cerr << endl;
-        
-        // sample values, break when necessary
-        int words=0,sents=0;
-        for(int s = 0; s < (int)eCorpus_.size(); s++) {
-            if((eCorpus_[s].length()*fCorpus_[s].length())!=0 && (int)max(eCorpus_[s].length(),fCorpus_[s].length()) <= currMaxLen) {
-                words += eCorpus_[s].length()+fCorpus_[s].length();
-                removeSample(s);              // remove the current sample from the distribution
-                model_->initializeBuffers();  // cache commonly used probability values
-                SpanNode * head = buildSample(s,chartTemp_); // build the sample tree
-                hCorpus_[s] = addSample(eCorpus_[s],fCorpus_[s],head,&tCorpus_[s*3],aCorpus_[s]);  // add the sample
-                if(sampleOut_) printSample(eCorpus_[s],fCorpus_[s],head);
-                delete head;
-                if(++sents % 100 == 0) cerr << "\r" << sents;
+            for(int s = 0; s < (int)eCorpus_.size(); s++) {
+                if(nCorpus_[s]) printSample(eCorpus_[s],fCorpus_[s],nCorpus_[s],sampleOut);
+                sampleOut << endl;
             }
-            if(sampleOut_) *sampleOut_ << endl;
-        }
-       cerr << "\r Sentences Sampled: "<<sents<<endl;
 
-        if(onSample_) {
-            delete sampleOut_;
-            sampleOut_ = 0;
-            ostringstream name;
-            name << prefix_ << sampNum << ".pt";
+            // print the phrase table
+            ostringstream name2;
+            name2 << prefix_ << sampNum << ".pt";
 #ifdef COMPRESS_ON
-            name << ".gz";
-            utils::compress_ostream ptos(name.str().c_str(),65536);
+            name2 << ".gz";
+            utils::compress_ostream ptos(name2.str().c_str(),65536);
 #else
-            ofstream ptos(name.str().c_str());
+            ofstream ptos(name2.str().c_str());
 #endif
             printPhraseTable(ptos);
         }
@@ -735,12 +787,8 @@ void PIAlign::train() {
 
         // print stats
         model_->printStats(cerr);
-        cerr << " Likelihood="<< likelihood_/words <<endl;       
-        cerr << " Phrases: e="<<ePhrases_.size()<<", f="<<fPhrases_.size()<<", j="<<jointPhrases_.size()<<endl;
-        timeAll_ = timeRemove_+timeInit_+timeBase_+timeGen_+timeFor_+timeSamp_;
-        cerr << " Time="<<timeAll_<<"s (r="<<timeRemove_<<", i="<<timeInit_<<", b="<<timeBase_<<", g="<<timeGen_<<", f="<<timeFor_<<", s="<<timeSamp_<<")"<<endl;
-        cerr << " Avg. Beam="<<(double)totalBeam_/totalBeamTimes_<<endl;
-
+        cerr << " Phrases: e="<<ePhrases_.size()<<", f="<<fPhrases_.size()<<", j="<<jointPhrases_.size()<<std::endl;
+        jd.printStats(cerr);
     }
 
     for(int s = 0; s < (int)eCorpus_.size(); s++)

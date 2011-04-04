@@ -12,8 +12,49 @@
 #include <algorithm>
 #include <fstream>
 #include <iostream>
+#include <pthread.h>
 
 namespace pialign {
+
+class PIAlign;
+
+// information about the current iteration
+class JobDetails {
+public:
+    Prob likelihood;
+    int words;
+    int totalBeam, totalBeamTimes;
+    double timeInit, timeBase, timeGen, timeFor, timeSamp, timeRemove, timeAll;
+    void reset() {
+        likelihood = 0; words = 0;
+        totalBeam = 0; totalBeamTimes = 0;
+        timeRemove = 0; timeInit = 0; timeBase = 0;
+        timeGen = 0; timeFor = 0; timeSamp = 0; timeAll = 0;
+    }
+    JobDetails & operator+=(const JobDetails &rhs) {
+        likelihood += rhs.likelihood; words += rhs.words;
+        totalBeam += rhs.totalBeam; totalBeamTimes += rhs.totalBeamTimes;
+        timeRemove += rhs.timeRemove; timeInit += rhs.timeInit; 
+        timeBase += rhs.timeBase; timeGen += rhs.timeGen; 
+        timeFor += rhs.timeFor; timeSamp += rhs.timeSamp; 
+        timeAll += rhs.timeAll;
+    }
+    void printStats(std::ostream & out) {
+        out << " Likelihood="<< likelihood/words <<std::endl;       
+        out << " Time="<<timeAll<<"s (r="<<timeRemove<<", i="<<timeInit<<", b="<<timeBase<<", g="<<timeGen<<", f="<<timeFor<<", s="<<timeSamp<<")"<<std::endl;
+        out << " Avg. Beam="<<(double)totalBeam/totalBeamTimes<<std::endl;
+    }
+};
+
+// a data structure representing a single job
+class BuildJob {
+public:
+    ParseChart chart;
+    std::vector<int>::iterator begin, end;
+    pthread_t thread;
+    PIAlign* pialign;
+    JobDetails details;
+};
 
 class PIAlign {
 
@@ -24,12 +65,15 @@ protected:
     int sampRate_;          // the distance between samples  
     int burnIn_;            // the number of samples to throw out 
     
-    int babySteps_;         // the number of baby steps to take 
-    int babyStepLen_;    // the length of each baby step 
-    int annealSteps_;       // the number of baby steps to take 
-    int annealStepLen_;  // the length of each baby step 
-    int wordIters_;       // the number number of iterations to do with the word-based model (0)
-    Prob annealLevel_;      // the current level of annealing
+    int babySteps_;        // the number of baby steps to take 
+    int babyStepLen_;      // the length of each baby step 
+    int annealSteps_;      // the number of baby steps to take 
+    int annealStepLen_;    // the length of each baby step 
+    int batchLen_;         // the length of each batch step
+    int numThreads_;       // the number of threads to use
+    bool shuffle_;         // shuffle the order of sentences for sampling
+    int wordIters_;        // the number number of iterations to do with the word-based model (0)
+    Prob annealLevel_;     // the current level of annealing
     int maxPhraseLen_;     // the maximum phrase size  
     int printMax_;         // the maximum phrase size to print  
     int printMin_;         // the minimum phrase size to print  
@@ -63,11 +107,10 @@ protected:
     bool onSample_; // whether we are currently calculating a sample or not
     std::vector<Prob> patternBuffer_; // a buffer holding the log probabilities of each pattern type
     std::vector<Prob> poisProbs_; // a buffer holding the log probabilities of the Poisson dist
-    ParseChart chartTemp_; // the chart of the current probabilities
+    std::vector<BuildJob> buildJobs_; // sample building jobs
 
-                           //  the base distribution
-    std::ostream *sampleOut_, *phraseOut_; // the file to write to
-    // int currELen_, currFLen_; // the current lengths of e and f
+
+    // the base distribution
     int currEMultiplier_; // the current lengths of e and f
 
     // corpora 
@@ -75,8 +118,8 @@ protected:
     Corpus eCorpus_, fCorpus_;
     // corpus of the joint pairs used in each sentence
     Corpus aCorpus_;
-    // corpora of the types of non-terminals and heads
-    std::vector<int> tCorpus_, hCorpus_;
+    // a corpus of derivation trees
+    std::vector<SpanNode*> nCorpus_;
 
     // vocabs
     WordSymbolSet eVocab_, fVocab_;
@@ -91,12 +134,6 @@ protected:
     //  (used in printing the phrase table)
     std::vector<Prob> derivations_;
 
-    // information variables    
-    Prob likelihood_; // the likelihood of the current pass
-    // time taken on each step
-    double timeRemove_, timeInit_, timeBase_, timeGen_, timeFor_, timeSamp_, timeAll_;
-    int totalBeam_, totalBeamTimes_;
-
     void trimPhraseDic(StringWordMap & dic, std::vector<WordId> & idMap);
     void trim();
 
@@ -104,14 +141,15 @@ public:
 
 
     PIAlign() : samples_(1), sampRate_(1), burnIn_(9),
-        babySteps_(1), babyStepLen_(0), annealSteps_(1), annealStepLen_(0), wordIters_(0),
+        babySteps_(1), babyStepLen_(0), annealSteps_(1), annealStepLen_(0), 
+        batchLen_(1), numThreads_(1), shuffle_(true), wordIters_(0),
         maxPhraseLen_(3), printMax_(7), printMin_(1), maxSentLen_(40), histWidth_(0), probWidth_(1e-10),
         modelType_(MODEL_HIER), forceWord_(true), avgPhraseLen_(0.01), nullProb_(0.01), 
         termStrength_(1), termPrior_(1.0/3.0),
         defDisc_(-1), defStren_(-1),
         baseType_(BASE_MODEL1G), monotonic_(false),
         eFile_(0), fFile_(0), prefix_(0), le2fFile_(0), lf2eFile_(0), 
-        patternBuffer_(3), sampleOut_(0),
+        patternBuffer_(3),
         base_(0), model_(0), derivations_()
         { }
 
@@ -147,27 +185,27 @@ public:
     void addFlatBases(const WordString & e, const WordString & f);
 
     // find all edges in a sentence
-    std::vector<LabeledEdge> findEdges(const WordString & str, const StringWordMap & dict);
+    std::vector<LabeledEdge> findEdges(const WordString & str, const StringWordMap & dict) const;
 
     // generative
-    void addGenerativeProbs(const WordString & e, const WordString & f, ParseChart & chart, SpanProbMap & genChart);
+    void addGenerativeProbs(const WordString & e, const WordString & f, ParseChart & chart, SpanProbMap & genChart) const;
 
     // add forward probabilities
-    void addForwardProbs(int eLen, int fLen, ParseChart & chart);
+    void addForwardProbs(int eLen, int fLen, ParseChart & chart, Prob pWidth, int hWidth, JobDetails & jd) const;
 
     // do the actual sampling
-    SpanNode * sampleTree(int sent, const Span & mySpan, WordString & sentIds, int* typeIds, const ParseChart & chart, const SpanProbMap & genChart, const SpanProbMap & baseChart, bool add);
-    // WordId sampleTree(int sent, const Span & mySpan, WordString & ids, int* tCounts, const ParseChart & chart, const SpanProbMap & genChart, const SpanProbMap & baseChart, bool add);
+    SpanNode * sampleTree(int sent, const Span & mySpan, const ParseChart & chart, const SpanProbMap & genChart, const SpanProbMap & baseChart, bool add) const;
     
     // print a span
-    void printSpan(const WordString & e, const WordString & f, const Span & mySpan, std::ostream & out, const char* phraseSep = " ||| ", const char* wordSep = " ", const char* phraseBeg = "((( ", const char* phraseEnd = " )))");
-    std::string printSpan(const WordString & e, const WordString & f, const Span & mySpan, const char* phraseSep = " ||| ", const char* wordSep = " ",  const char* phraseBeg = "((( ", const char* phraseEnd = " )))");
+    void printSpan(const WordString & e, const WordString & f, const Span & mySpan, std::ostream & out, const char* phraseSep = " ||| ", const char* wordSep = " ", const char* phraseBeg = "((( ", const char* phraseEnd = " )))") const;
+    std::string printSpan(const WordString & e, const WordString & f, const Span & mySpan, const char* phraseSep = " ||| ", const char* wordSep = " ",  const char* phraseBeg = "((( ", const char* phraseEnd = " )))") const;
 
     // *** sample algorithms
     void removeSample(int s);
-    SpanNode * buildSample(int s, ParseChart & chart);
-    WordId addSample(const WordString & e, const WordString & f, const SpanNode * myNode, int* tCounts, WordString & sentIds);
-    void printSample(const WordString & e, const WordString & f, const SpanNode * myNode);
+    // void *buildSamples(void* ptr);
+    SpanNode * buildSample(int s, ParseChart & chart, Prob pWidth, int hWidth, JobDetails & jd) const;
+    // WordId addSample(const WordString & e, const WordString & f, SpanNode * myNode);
+    void printSample(const WordString & e, const WordString & f, const SpanNode * myNode, std::ostream & sampleOut);
 
     // print the phrase table
     void printPhraseTable(std::ostream & os);
@@ -192,6 +230,9 @@ public:
     const WordString & getFSentence(int i) const { return fCorpus_[i]; }
     const Corpus & getFCorpus() const { return fCorpus_; }
     void setFCorpus(const Corpus & v) { fCorpus_ = v; }
+    int getHistWidth() const { return histWidth_; }
+    Prob getProbWidth() const { return probWidth_; }
+    void setNode(int id, SpanNode * node) { nCorpus_[id] = node; }
 
 };
 

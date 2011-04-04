@@ -85,7 +85,14 @@ A: The bracketed representation in the derivation file has four different types 
 
 Q: pialign is too slow!
 
-A: If you want a speed up at the possible small drop in alignment accuracy, you can reduce the size of the probability beam using the -probwidth option. The default is "-probwidth 1e-10" so if you set this to "-probwidth 1e-08" instead, you will likely see a significant speed up. We are also currently working on parallelization or other ways to speed up the alignment process.
+A: The easiest way speed up pialign is to use multi-threading. This can be done by setting the
+"-batchlen" and "-threads" parameters. "-threads" should be set to the number of cores you want to
+use. "-batchlen" must be as large as "-threads." The larger the value is, the faster multi-threaded
+processing will be, but very large values might cause a small decrease in accuracy. It is likely
+that a value 10-40 times the number of threads would be appropriate. For example, if you want to use
+4 cores, you can set "-threads 4 -batchlen 40".
+
+Also, if you cannot use multiple cores and you want a speed up at the possible small drop in alignment accuracy, you can reduce the size of the probability beam using the -probwidth option. The default is "-probwidth 1e-10" so if you set this to "-probwidth 1e-08" instead, you will likely see a significant speed up.
 
 ~~~
 

@@ -37,7 +37,9 @@ public:
     inline void addToChart(int s, int t, int u, int v, Prob p, int idx, int len) {
 #ifdef DEBUG_ON
         if(len == 0)
-            throw std::runtime_error("ParseChart Attempted to add an empty span");
+            throw std::runtime_error("ParseChart attempted to add an empty span");
+        if(p != p)
+            throw std::runtime_error("ParseChart attempted to add nan value");
 #endif
         if((*this)[idx] <= NEG_INFINITY) {
             agendas_[len-1].push_back(Span(s,t,u,v));
@@ -75,40 +77,11 @@ public:
         (*this)[findChartPosition(s)] = NEG_INFINITY;
     }
 
-    void initialize(int eLen, int fLen) {
-#ifdef DEBUG_ON
-        if(debug_)
-            std::cerr << "Initialize: "<<eLen<<","<<fLen<<std::endl;
-#endif
-        eMultiplier_ = fLen*(fLen+1)/2+fLen+1;
-        int maxSize = findChartPosition(eLen,eLen,fLen,fLen)+1;
-        if((int)size() < maxSize)
-            resize(maxSize);
-        fill(begin(), begin()+maxSize, NEG_INFINITY);
-        agendas_ = Agendas(eLen+fLen,SpanSet());
-    }
+    // initialize the parse chart to the appropriate size
+    void initialize(int eLen, int fLen);
 
     // trim and return an agenda
-    ProbSpanSet getTrimmedAgenda(int l, int histWidth, Prob probWidth) { 
-        SpanSet & agenda = agendas_[l-1];
-        // build the beam
-        ProbSpanSet ret;
-        ret.reserve(agenda.size());
-        for(SpanSet::const_iterator it = agenda.begin(); it != agenda.end(); it++)
-            ret.push_back(ProbSpan(getFromChart(*it),*it));
-        // trim the beam if necessary
-        if(probWidth != 0 || (histWidth != 0 && (int)agenda.size() > histWidth)) {
-            int i, myMax = ret.size();
-            if(histWidth) myMax = std::min(histWidth,myMax);
-            std::sort(ret.begin(), ret.end(), moreProb);
-            if(probWidth) {
-                for(i = 0; i < myMax && ret[i].first>ret[0].first+probWidth; i++);
-                myMax = i;
-            }
-            ret.resize(myMax);
-        }
-        return ret;
-    }
+    ProbSpanSet getTrimmedAgenda(int l, int histWidth, Prob probWidth);
 
     void setDebug(int debug) { debug_ = debug; }
 
