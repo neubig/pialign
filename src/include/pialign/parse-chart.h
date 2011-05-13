@@ -2,7 +2,7 @@
 #define PARSE_CHART_H__
 
 #include <vector>
-#include "definitions.h"
+#include "pialign/definitions.h"
 
 namespace pialign {
 

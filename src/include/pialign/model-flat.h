@@ -1,7 +1,7 @@
 #ifndef PROB_FLAT_H__
 #define PROB_FLAT_H__
 
-#include "model-base.h"
+#include "pialign/model-base.h"
 
 namespace pialign {
 

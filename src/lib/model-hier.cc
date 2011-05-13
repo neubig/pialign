@@ -1,4 +1,4 @@
-#include "model-hier.h"
+#include "pialign/model-hier.h"
 
 using namespace pialign;
 

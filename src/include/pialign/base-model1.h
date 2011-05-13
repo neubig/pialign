@@ -1,7 +1,7 @@
 #ifndef BASE_MODEL1_H__
 #define BASE_MODEL1_H__
 
-#include "base-measure.h"
+#include "pialign/base-measure.h"
 #include <iostream>
 #include <fstream>
 #include <string>

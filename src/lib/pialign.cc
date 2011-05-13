@@ -1,23 +1,24 @@
-#include "pialign.h"
+
 
 // #include "statecollection.h"
 #include <fstream>
 #include <cmath>
 #include <sys/time.h>
 
-#include "base-model1.h"
-#include "base-unigram.h"
+#include "pialign/pialign.h"
+#include "pialign/base-model1.h"
+#include "pialign/base-unigram.h"
 
-#include "model-hier.h"
-#include "model-flat.h"
-#include "model-length.h"
+#include "pialign/model-hier.h"
+#include "pialign/model-flat.h"
+#include "pialign/model-length.h"
 
 #ifdef COMPRESS_ON
-#include "compress_stream.hpp"
+#include "pialign/compress_stream.hpp"
 #endif
 
 #ifdef HAVE_CONFIG_H 
-#include "config.h"
+#include "pialign/config.h"
 #endif
 
 using namespace std;

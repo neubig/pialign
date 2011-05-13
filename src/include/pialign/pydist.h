@@ -1,7 +1,7 @@
 #ifndef PYDIST_H__
 #define PYDIST_H__
 
-#include "definitions.h"
+#include "pialign/definitions.h"
 #include "gng/samp-gen.h"
 #include <vector>
 #include <stdexcept>

@@ -1,10 +1,10 @@
 #ifndef PROB_MODEL_H__
 #define PROB_MODEL_H__
 
-#include "definitions.h"
-#include "pydist.h"
-#include "dirichletdist.h"
-#include "parse-chart.h"
+#include "pialign/definitions.h"
+#include "pialign/pydist.h"
+#include "pialign/dirichletdist.h"
+#include "pialign/parse-chart.h"
 #include <vector>
 
 namespace pialign {

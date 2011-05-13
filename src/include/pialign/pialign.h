@@ -1,11 +1,11 @@
 #ifndef PIALIGN_H__
 #define PIALIGN_H__
 
-#include "pydist.h"
-#include "dirichletdist.h"
-#include "base-measure.h"
-#include "model-base.h"
-#include "parse-chart.h"
+#include "pialign/pydist.h"
+#include "pialign/dirichletdist.h"
+#include "pialign/base-measure.h"
+#include "pialign/model-base.h"
+#include "pialign/parse-chart.h"
 #include "gng/string.h"
 #include "gng/symbol-set.h"
 #include <tr1/unordered_map>

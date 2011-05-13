@@ -1,5 +1,5 @@
 
-#include "model-flat.h"
+#include "pialign/model-flat.h"
 
 using namespace pialign;
 

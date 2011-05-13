@@ -1,7 +1,7 @@
 #ifndef PROB_LENGTH_H__
 #define PROB_LENGTH_H__
 
-#include "model-base.h"
+#include "pialign/model-base.h"
 #include <stdexcept>
 
 namespace pialign {

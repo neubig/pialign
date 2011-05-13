@@ -14,7 +14,7 @@ AC_CONFIG_FILES([
     src/test/Makefile
 ])
 
-AM_INIT_AUTOMAKE(pialign, 0.1.0)
+AM_INIT_AUTOMAKE([-Wall])
 
 # Uncomment to disable shared libraries (for example, for debugging)
 # AM_DISABLE_SHARED

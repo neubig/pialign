@@ -2,9 +2,9 @@
 #define BASE_MEASURE_H__
 
 #include <vector>
-#include "definitions.h"
-#include "parse-chart.h"
-#include "model-base.h"
+#include "pialign/definitions.h"
+#include "pialign/parse-chart.h"
+#include "pialign/model-base.h"
 
 namespace pialign {
 

@@ -1,4 +1,4 @@
-#include "pialign.h"
+#include "pialign/pialign.h"
 
 using namespace pialign;
 

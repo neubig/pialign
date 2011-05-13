@@ -1,7 +1,7 @@
 #ifndef BASE_UNIGRAM_H__
 #define BASE_UNIGRAM_H__
 
-#include "base-measure.h"
+#include "pialign/base-measure.h"
 #include <algorithm>
 
 namespace pialign {

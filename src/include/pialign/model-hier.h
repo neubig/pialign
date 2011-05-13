@@ -1,7 +1,7 @@
 #ifndef PROB_HIER_H__
 #define PROB_HIER_H__
 
-#include "model-base.h"
+#include "pialign/model-base.h"
 #include <stdexcept>
 
 namespace pialign {

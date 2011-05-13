@@ -1,7 +1,7 @@
 #ifndef DIRICHLETDIST_H__
 #define DIRICHLETDIST_H__
 
-#include "definitions.h"
+#include "pialign/definitions.h"
 #include "gng/samp-gen.h"
 #include <vector>
 #include <stdexcept>
