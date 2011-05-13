@@ -1,8 +1,8 @@
-------------------------------
-pialign - Phrasal ITG Aligner
-     by Graham Neubig
-        2011-03-24
-------------------------------
+-----------------------------------
+   pialign - Phrasal ITG Aligner
+by Graham Neubig (neubig@gmail.com)
+          2011-05-13
+-----------------------------------
 
 pialign is a package that allows you to create a phrase table and word alignments from an unaligned parallel corpus. First, configure and make the program:
 
@@ -22,7 +22,9 @@ When the program is done running, it will output two files "out/align.1.samp" an
 ----- Details/Citation ------
 -----------------------------
 
-If you would like more detailsi about the method or want to cite pialign in your research, please reference:
+pialign was written by Graham Neubig while he was an intern at the National Institute of Information and Communication Technology (NICT), Japan. It is distributed under the common public license, version 1.0 (available in the COPYING file.
+
+If you would like more details about the method or want to cite pialign in your research, please reference:
 
 An Unsupervised Model for Joint Phrase Alignment and Extraction
 Graham Neubig, Taro Watanabe, Eiichiro Sumita, Shinsuke Mori, and Tatsuya Kawahara
@@ -108,8 +110,8 @@ A: If you checked the source directly out from the repository, you may have to r
 
 Usage: pialign [OPTIONS] FFILE EFILE PREFIX
 
- FFILE is the foreign (source) input corpus
- EFILE is the english (target) input corpus
+ FFILE is the foreign input corpus
+ EFILE is the english input corpus
  PREFIX is the prefix that will be used for the output
 
 Other input:
@@ -136,7 +138,7 @@ Other input:
 ~~~ Phrase Table ~~~
 
  -maxphraselen The maximum length of a minimal phrase (default 7)
- -maxsentlen   The maximum length of sentences to be used (default 40)
+ -maxsentlen   The maximum length of sentences to use (default 40)
  -printmax     The maximum length of phrases included in the phrase table (default 7)
  -printmin     The minimal length of phrases included in the phrase table (default 1)
  -noword       Output only phrase alignments (do not force output of word alignments)
@@ -149,7 +151,9 @@ Other input:
  -samps        The number of samples to take (default 1)
  -samprate     Take samples every samprate turns (default 1)
  -worditers    The number of iterations to perform with a word-based model (default 0)
-
+ -noshuffle    Don't shuffle the order of the sentences
+ -batchlen     The number of sentences to process in a single batch
+ -threads      The number of threads to use (must be <= -batchlen)
 
 -----------------------------
 ---------- Misc. ------------
@@ -163,4 +167,3 @@ If you have boost installed, uncomment the lines at the beginning of the Makefil
 
 * Increase the efficiency of Model 1 calculation.
 * Reduce the memory used by the phrase table by representing phrases as references to their position in the corpus (like a suffix array).
-* Distributed sampling to allow for training on larger data sets.
