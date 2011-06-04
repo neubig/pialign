@@ -368,7 +368,7 @@ void PIAlign::addForwardProbs(int eLen, int fLen, ParseChart & chart, const Look
         // cerr << "At length "<< l<<", processing "<< spanSize << " values"<<endl;
         for(i = 0; i < spanSize; i++) {
             const Span & mySpan = spans[i].second;
-            myProb = spans[i].first;
+            myProb = chart.getFromChart(mySpan);
             s = mySpan.es; t = mySpan.ee; u = mySpan.fs; v = mySpan.fe;
             // cerr << "processing span "<<s<<","<<t<<","<<u<<","<<v<<endl;
             // e is forward

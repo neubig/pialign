@@ -17,7 +17,7 @@ AC_CONFIG_FILES([
 AM_INIT_AUTOMAKE([-Wall])
 
 # Uncomment to disable shared libraries (for example, for debugging)
-AM_DISABLE_SHARED
+# AM_DISABLE_SHARED
 
 # Checks for programs.
 AC_PROG_LIBTOOL
