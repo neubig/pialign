@@ -6,6 +6,7 @@
 #include "pialign/base-measure.h"
 #include "pialign/model-base.h"
 #include "pialign/parse-chart.h"
+#include "pialign/look-base.h"
 #include "gng/string.h"
 #include "gng/symbol-set.h"
 #include <tr1/unordered_map>
@@ -24,24 +25,26 @@ public:
     Prob likelihood;
     int words;
     int totalBeam, totalBeamTimes;
-    double timeInit, timeBase, timeGen, timeFor, timeSamp, timeRemove, timeAll;
+    double timeInit, timeBase, timeGen, timeLook, timeFor, timeSamp, timeRemove, timeAll;
     void reset() {
         likelihood = 0; words = 0;
         totalBeam = 0; totalBeamTimes = 0;
         timeRemove = 0; timeInit = 0; timeBase = 0;
-        timeGen = 0; timeFor = 0; timeSamp = 0; timeAll = 0;
+        timeGen = 0; timeLook = 0; timeFor = 0; timeSamp = 0; timeAll = 0;
     }
     JobDetails & operator+=(const JobDetails &rhs) {
         likelihood += rhs.likelihood; words += rhs.words;
         totalBeam += rhs.totalBeam; totalBeamTimes += rhs.totalBeamTimes;
         timeRemove += rhs.timeRemove; timeInit += rhs.timeInit; 
-        timeBase += rhs.timeBase; timeGen += rhs.timeGen; 
+        timeBase += rhs.timeBase; timeGen += rhs.timeGen;
+        timeLook += rhs.timeLook; 
         timeFor += rhs.timeFor; timeSamp += rhs.timeSamp; 
         timeAll += rhs.timeAll;
+        return *this;
     }
     void printStats(std::ostream & out) {
         out << " Likelihood="<< likelihood/words <<std::endl;       
-        out << " Time="<<timeAll<<"s (r="<<timeRemove<<", i="<<timeInit<<", b="<<timeBase<<", g="<<timeGen<<", f="<<timeFor<<", s="<<timeSamp<<")"<<std::endl;
+        out << " Time="<<timeAll<<"s (r="<<timeRemove<<", i="<<timeInit<<", b="<<timeBase<<", g="<<timeGen<<", l="<<timeLook<<", f="<<timeFor<<", s="<<timeSamp<<")"<<std::endl;
         out << " Avg. Beam="<<(double)totalBeam/totalBeamTimes<<std::endl;
     }
 };
@@ -50,6 +53,7 @@ public:
 class BuildJob {
 public:
     ParseChart chart;
+    LookAhead* lookAhead;
     std::vector<int>::iterator begin, end;
     pthread_t thread;
     PIAlign* pialign;
@@ -80,6 +84,10 @@ protected:
     int maxSentLen_;       // the maximum size of a sentence  
     int histWidth_;        // the width of the histogram to use 
     Prob probWidth_;       // the width of the probability beam to use 
+    int lookType_;             // which look-ahead to use (default LOOK_NONE)
+    static const int LOOK_NONE = 0;
+    static const int LOOK_IND = 1;
+
     int modelType_;        // which model to use
     static const int MODEL_HIER = 0;
     static const int MODEL_FLAT = 1;
@@ -90,11 +98,14 @@ protected:
     Prob termStrength_, termPrior_; // the strength of the type dist and prior of the terminal
     Prob defDisc_, defStren_; // the default discounts and strengths of the Pitman-Yor process
     
-    int baseType_;             // which base measure to use (default BASE_UNI)
+    int baseType_;             // which base measure to use (default BASE_MODEL1G)
     static const int BASE_UNI = 0;
     static const int BASE_MODEL1 = 1;
     static const int BASE_MODEL1G = 2;
+    static const int BASE_PHRASECOOC_LL = 3;
     bool monotonic_;          // disable inversions
+    Prob coocDisc_;           // the amount to discount the coocurrence
+    Prob coocCut_;            // where to cut off the cooccurrence probs
 
     // input/output parameters
     const char* eFile_;     // the english (target language) file
@@ -109,15 +120,12 @@ protected:
     std::vector<Prob> poisProbs_; // a buffer holding the log probabilities of the Poisson dist
     std::vector<BuildJob> buildJobs_; // sample building jobs
 
-
     // the base distribution
     int currEMultiplier_; // the current lengths of e and f
 
     // corpora 
     // English and French corpora
     Corpus eCorpus_, fCorpus_;
-    // corpus of the joint pairs used in each sentence
-    Corpus aCorpus_;
     // a corpus of derivation trees
     std::vector<SpanNode*> nCorpus_;
 
@@ -143,13 +151,13 @@ public:
     PIAlign() : samples_(1), sampRate_(1), burnIn_(9),
         babySteps_(1), babyStepLen_(0), annealSteps_(1), annealStepLen_(0), 
         batchLen_(1), numThreads_(1), shuffle_(true), wordIters_(0),
-        maxPhraseLen_(3), printMax_(7), printMin_(1), maxSentLen_(40), histWidth_(0), probWidth_(1e-10),
+        maxPhraseLen_(3), printMax_(7), printMin_(1), maxSentLen_(40), histWidth_(0), probWidth_(1e-10), lookType_(LOOK_NONE),
         modelType_(MODEL_HIER), forceWord_(true), avgPhraseLen_(0.01), nullProb_(0.01), 
         termStrength_(1), termPrior_(1.0/3.0),
         defDisc_(-1), defStren_(-1),
-        baseType_(BASE_MODEL1G), monotonic_(false),
-        eFile_(0), fFile_(0), prefix_(0), le2fFile_(0), lf2eFile_(0), 
-        patternBuffer_(3),
+        baseType_(BASE_MODEL1G), monotonic_(false), coocDisc_(1.0), 
+        coocCut_(1.0e-4), eFile_(0), fFile_(0), prefix_(0), le2fFile_(0), 
+        lf2eFile_(0), patternBuffer_(3),
         base_(0), model_(0), derivations_()
         { }
 
@@ -162,7 +170,7 @@ public:
     ////////////////////
 
     // load a corpus
-    Corpus loadCorpus(std::string file, gng::SymbolSet< std::string, WordId > & vocab, WordId boost);
+    void loadCorpus(Corpus & ret, std::string file, gng::SymbolSet< std::string, WordId > & vocab, WordId boost);
 
     // load the configuration
     void loadConfig(int argc, const char** argv);
@@ -184,14 +192,11 @@ public:
     std::vector<Prob> spanModelOne(const WordString & e, const WordString & f);
     void addFlatBases(const WordString & e, const WordString & f);
 
-    // find all edges in a sentence
-    std::vector<LabeledEdge> findEdges(const WordString & str, const StringWordMap & dict) const;
-
     // generative
     void addGenerativeProbs(const WordString & e, const WordString & f, ParseChart & chart, SpanProbMap & genChart) const;
 
     // add forward probabilities
-    void addForwardProbs(int eLen, int fLen, ParseChart & chart, Prob pWidth, int hWidth, JobDetails & jd) const;
+    void addForwardProbs(int eLen, int fLen, ParseChart & chart, const LookAhead & look, Prob pWidth, int hWidth, JobDetails & jd) const;
 
     // do the actual sampling
     SpanNode * sampleTree(int sent, const Span & mySpan, const ParseChart & chart, const SpanProbMap & genChart, const SpanProbMap & baseChart, bool add) const;
@@ -203,7 +208,7 @@ public:
     // *** sample algorithms
     void removeSample(int s);
     // void *buildSamples(void* ptr);
-    SpanNode * buildSample(int s, ParseChart & chart, Prob pWidth, int hWidth, JobDetails & jd) const;
+    SpanNode * buildSample(int s, ParseChart & chart, LookAhead * lookAhead, Prob pWidth, int hWidth, JobDetails & jd) const;
     // WordId addSample(const WordString & e, const WordString & f, SpanNode * myNode);
     void printSample(const WordString & e, const WordString & f, const SpanNode * myNode, std::ostream & sampleOut);
 

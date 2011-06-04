@@ -117,10 +117,57 @@ public:
     }
 };
 
-typedef gng::GenericString<WordId> WordString;
-typedef std::vector<WordString> Corpus;
+class WordString {
+
+protected:
+    WordId* ptr_;
+    size_t len_;
+
+public:
+
+    WordString() : ptr_(0), len_(0) { }
+    WordString(WordId* ptr, size_t len) : ptr_(ptr), len_(len) { }
+
+    size_t length() const { return len_; }
+    WordId operator[](size_t idx) const { return ptr_[idx]; }
+
+    void setLength(size_t len) { len_ = len; }
+
+    WordString substr(int i, int j) const { return WordString(ptr_+i,j); }
+
+    inline size_t getHash() const {
+        size_t hash = 5381;
+        for(unsigned i = 0; i < len_; i++)
+            hash = ((hash << 5) + hash) + ptr_[i]; /* hash * 33 + x[i] */
+        return hash;
+    }
+
+    WordId* getPointer() { return ptr_; }
+
+};
+
+inline bool operator<(const WordString & a, const WordString & b) {
+    unsigned i;
+    const unsigned al = a.length(), bl = b.length(), ml=std::min(al,bl);
+    for(i = 0; i < ml; i++) {
+        if(a[i] < b[i]) return true;
+        else if(b[i] < a[i]) return false;
+    }
+    return (bl != i);
+}
+
+inline bool operator==(const WordString & a, const WordString & b) {
+    unsigned i;
+    const unsigned al = a.length();
+    if(al!=b.length())
+        return false;
+    for(i = 0; i < al; i++)
+        if(a[i] != b[i]) return false;
+    return true;
+}
+
+
 typedef gng::SymbolSet< std::string, WordId > WordSymbolSet;
-typedef gng::SymbolMap< WordString, WordId, gng::GenericStringHash<WordId> > StringWordMap;
 typedef gng::SymbolMap< std::pair<WordId, WordId>, WordId, PairHash<WordId> > PairWordMap;
 typedef std::tr1::unordered_map< std::pair<WordId, WordId>, Prob, PairHash<WordId> > PairProbMap;
 typedef gng::SymbolMap< Span, int, SpanHash > SpanSymbolMap;
@@ -128,6 +175,29 @@ typedef std::vector< Span > SpanSet;
 typedef std::vector< SpanSet > Agendas; 
 typedef std::pair<Prob, Span> ProbSpan;
 typedef std::vector< ProbSpan > ProbSpanSet;
+
+
+class StringWordMap : public gng::SymbolMap< WordString, WordId, gng::GenericHash<WordString> > {
+
+public:
+      
+    // find all active phrases in a string
+    std::vector<LabeledEdge> findEdges(const WordString & str, int maxLen) const {
+        int T = str.length(), jLim;
+        std::vector<LabeledEdge> ret;    
+        for(int i = 0; i <= T; i++) {
+            jLim = std::min(i+maxLen,T);
+            for(int j = i; j <= jLim; j++) {
+                StringWordMap::const_iterator it = this->find(str.substr(i,j-i));
+                if(it != this->end()) {
+                    ret.push_back(LabeledEdge(i,j,it->second));
+                }
+            }
+        }
+        return ret;
+    }
+
+};
 
 
 class SpanProbMap : public std::tr1::unordered_map< Span, Prob, SpanHash > {
@@ -197,6 +267,54 @@ inline Prob addLogProbs(Prob a, Prob b) {
     return log(exp(a-myMax)+exp(b-myMax))+myMax;
 #endif
 }
+
+class Corpus {
+
+protected:
+
+    std::vector<WordId> data;
+    std::vector<int> sentStarts;
+    std::vector<WordString> sentStrings;
+
+public:
+
+    size_t size() const { return sentStarts.size(); }
+
+    void addWord(WordId id) { data.push_back(id); }
+    void startSentence() { sentStarts.push_back(data.size()); }
+    void endSentence() { }
+    void makeSentences() { 
+        sentStrings.resize(sentStarts.size());
+        sentStarts.push_back(data.size());
+        data.push_back(0);
+        for(unsigned j = 1; j < sentStarts.size(); j++) {
+            sentStrings[j-1] = WordString(&data[sentStarts[j-1]], sentStarts[j]-sentStarts[j-1]);
+        }
+        sentStarts.pop_back();
+    }
+
+
+    WordString& operator[](size_t idx) {
+        return sentStrings[idx];
+    }
+    const WordString& operator[](size_t idx) const {
+        return sentStrings[idx];
+    }
+    const std::vector<WordId> & getData() const { return data; }
+    std::vector<WordId> & getData() { return data; }
+
+    std::vector<int> getSentIds() const { 
+        std::vector<int> ret(data.size(),0);
+        int sent = 0;
+        for(int i = 0; i < (int)data.size(); i++) {
+            if(sent < (int)sentStarts.size()-1 && sentStarts[sent+1] == i) 
+                sent++;
+            ret[i] = sent;
+        }
+        return ret;
+    }
+
+};
 
 }
 

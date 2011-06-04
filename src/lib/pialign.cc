@@ -8,10 +8,14 @@
 #include "pialign/pialign.h"
 #include "pialign/base-model1.h"
 #include "pialign/base-unigram.h"
+#include "pialign/base-phrasecooc.h"
 
 #include "pialign/model-hier.h"
 #include "pialign/model-flat.h"
 #include "pialign/model-length.h"
+
+#include "pialign/look-none.h"
+#include "pialign/look-ind.h"
 
 #ifdef COMPRESS_ON
 #include "pialign/compress_stream.hpp"
@@ -56,7 +60,10 @@ cerr << " A tool for unsupervised Bayesian alignment using phrase-based ITGs" <<
 << "               default is small (0.01) to prevent overly long alignments" << endl
 << " -base         The type of base measure to use (m1g is generally best)." << endl
 << "               'm1g'=geometric mean of model 1, 'm1'=arithmetic mean of model 1," << endl
-<< "               'uni'=simple unigrams (default 'm1g')" << endl
+<< "               'uni'=simple unigrams, 'coocll'=log-linear interpolation of phrase" << endl
+<< "               cooccurrence probabilities in both directions (default 'm1g')" << endl
+<< " -coocdisc     How much to discount the cooccurrence for phrasal base measures" << endl
+<< " -cooccut      Cut off coocurrence probabilities at this level" << endl
 << " -defstren     Fixed strength of the PY process (default none)" << endl
 << " -defdisc      Fixed discount of the PY process (default none)" << endl
 << " -nullprob     The probability of a null alignment (default 0.01)" << endl
@@ -80,6 +87,8 @@ cerr << " A tool for unsupervised Bayesian alignment using phrase-based ITGs" <<
 << " -burnin       The number of burn-in iterations (default 9)" << endl
 << " -histwidth    The width of the histogram pruning to use (default none)" << endl
 << " -probwidth    The width of the probability beam to use (default 1e-10)" << endl
+<< " -lookahead    The type of lookahead function to use:" << endl
+<< "               'none'=no look-ahead, 'ind'=independently calculate both sides" << endl
 << " -samps        The number of samples to take (default 1)" << endl
 << " -samprate     Take samples every samprate turns (default 1)" << endl
 << " -worditers    The number of iterations to perform with a word-based model (default 0)" << endl
@@ -137,12 +146,25 @@ void PIAlign::loadConfig(int argc, const char** argv) {
                 if(!strcmp(argv[i],"m1")) baseType_ = BASE_MODEL1;
                 else if(!strcmp(argv[i],"m1g")) baseType_ = BASE_MODEL1G;
                 else if(!strcmp(argv[i],"uni")) baseType_ = BASE_UNI;
+                else if(!strcmp(argv[i],"coocll")) baseType_ = BASE_PHRASECOOC_LL;
                 else {
                     ostringstream oss;
                     oss << "Unknown base argument "<<argv[i];
                     dieOnHelp(oss.str().c_str());
                 }
             }
+            else if(!strcmp(argv[i],"-lookahead")) {
+                ++i;
+                if(!strcmp(argv[i],"none")) lookType_ = LOOK_NONE;
+                else if(!strcmp(argv[i],"ind")) lookType_ = LOOK_IND;
+                else {
+                    ostringstream oss;
+                    oss << "Unknown base argument "<<argv[i];
+                    dieOnHelp(oss.str().c_str());
+                }
+            }
+            else if(!strcmp(argv[i],"-coocdisc"))       coocDisc_ = atof(argv[++i]);
+            else if(!strcmp(argv[i],"-cooccut"))        coocCut_ = atof(argv[++i]);
             else if(!strcmp(argv[i],"-nullprob"))       nullProb_ = atof(argv[++i]);
             else if(!strcmp(argv[i],"-termstren"))      termStrength_ = atof(argv[++i]);
             else if(!strcmp(argv[i],"-termprior"))      termPrior_ = atof(argv[++i]);
@@ -194,7 +216,8 @@ double timeDifference(const timeval & s, const timeval & e) {
 }
 
 // load the corpus
-Corpus PIAlign::loadCorpus(string file, SymbolSet< string, WordId > & vocab, WordId boost) {
+void PIAlign::loadCorpus(Corpus & ret, string file, SymbolSet< string, WordId > & vocab, WordId boost) {
+    vocab.getId("",true);
     ifstream ifs(file.c_str());
     if(!ifs) {
         ostringstream oss;
@@ -202,29 +225,28 @@ Corpus PIAlign::loadCorpus(string file, SymbolSet< string, WordId > & vocab, Wor
         throw runtime_error(oss.str());
     }
     string line,buff;
-    Corpus ret;
     while(getline(ifs, line)) {
         istringstream iss(line);
-        vector<WordId> sent;
+        ret.startSentence();
         while(iss >> buff)
-            sent.push_back(vocab.getId(buff,true)+boost);
-        ret.push_back(GenericString<WordId>(sent));
+            ret.addWord(vocab.getId(buff,true)+boost);
+        ret.endSentence();
     }
-    return ret;
+    ret.makeSentences();
 }
 
 void PIAlign::loadCorpora() {
 
     // load the corpora
-    eCorpus_ = loadCorpus(eFile_, eVocab_, 0);
-    fCorpus_ = loadCorpus(fFile_, fVocab_, eVocab_.size());
+    loadCorpus(eCorpus_, eFile_, eVocab_, 0);
+    loadCorpus(fCorpus_, fFile_, fVocab_, eVocab_.size());
     // remove sentences that are too long
     int total = 0, maxLen = 0;
     for(unsigned i = 0; i < eCorpus_.size(); i++) {
         int myLen = max(eCorpus_[i].length(),fCorpus_[i].length());
         if(myLen > maxSentLen_) {
-            eCorpus_[i] = WordString();
-            fCorpus_[i] = WordString();
+            eCorpus_[i].setLength(0);
+            fCorpus_[i].setLength(0);
         } else {
             total++;
             maxLen = max(myLen,maxLen);
@@ -236,13 +258,18 @@ void PIAlign::loadCorpora() {
     
     // allocate other corpora
     nCorpus_ = vector<SpanNode*>(eCorpus_.size(),0);
-    aCorpus_ = Corpus(eCorpus_.size(), WordString());
     
     // initialize the charts
     buildJobs_.resize(numThreads_);
     for(int i = 0; i < numThreads_; i++) {
         buildJobs_[i].chart.initialize(maxLen,maxLen);
         buildJobs_[i].pialign = this;
+        // -------------------- make the look-ahead -----------------------
+        // make the look-ahead
+        if(lookType_ == LOOK_NONE)
+            buildJobs_[i].lookAhead = new LookAheadNone();
+        else
+            buildJobs_[i].lookAhead = new LookAheadInd();
     }
 	model_->setMaxLen(maxLen);
 
@@ -250,8 +277,9 @@ void PIAlign::loadCorpora() {
 
 void PIAlign::initialize() {
 
+    // --------------- train the base model ---------------------
     // make the model one probabilities and logify if necessary
-    if(baseType_ != BASE_UNI) {
+    if(baseType_ == BASE_MODEL1 || baseType_ == BASE_MODEL1G) {
         BaseModelOne * model1 = new BaseModelOne();
         if(le2fFile_)
             model1->loadModelOne(le2fFile_,eVocab_,fVocab_,true);
@@ -264,7 +292,14 @@ void PIAlign::initialize() {
         base_ = model1;
         if(baseType_ == BASE_MODEL1G)
             ((BaseModelOne*)base_)->setGeometric(true);
-    } else
+    }
+    // train a phrase-based base measure using the dice coefficient
+    else if(baseType_ == BASE_PHRASECOOC_LL) {
+        base_ = new BasePhraseCooc();
+        ((BasePhraseCooc*)base_)->trainCooc(eCorpus_, eVocab_, fCorpus_, fVocab_, coocDisc_, coocCut_);
+    }
+    // train a unigram model
+    else
         base_ = new BaseUnigram();
     base_->trainUnigrams(eCorpus_, eVocab_.size(), fCorpus_, fVocab_.size());
     base_->setMaxLen(1);
@@ -294,26 +329,12 @@ inline Prob getModelOne(const PairProbMap & model1, WordId e, WordId f) {
     return (it==model1.end()?-50:it->second);
 }
 
-// find all active phrases in a string
-vector<LabeledEdge> PIAlign::findEdges(const WordString & str, const StringWordMap & dict) const {
-    int T = str.length();
-    int maxLen = (modelType_==MODEL_FLAT?maxPhraseLen_:T);
-    vector<LabeledEdge> ret;    
-    for(int i = 0; i <= T; i++) {
-        for(int j = i; j <= min(i+maxLen,T); j++) {
-            StringWordMap::const_iterator it = dict.find(str.substr(i,j-i));
-            if(it != dict.end()) {
-                ret.push_back(LabeledEdge(i,j,it->second));
-            }
-        }
-    }
-    return ret;
-}
-
 // add the generative probabilities
 void PIAlign::addGenerativeProbs(const WordString & e, const WordString & f, ParseChart & chart, SpanProbMap & genChart) const {
-    std::vector< LabeledEdge > eEdges = findEdges(e,ePhrases_);
-    std::vector< LabeledEdge > fEdges = findEdges(f,fPhrases_);
+    int maxLen = (modelType_ == MODEL_FLAT ? maxPhraseLen_ : (int)e.length());
+    std::vector< LabeledEdge > eEdges = ePhrases_.findEdges(e,maxLen);
+    maxLen = (modelType_ == MODEL_FLAT ? maxPhraseLen_ : (int)f.length());
+    std::vector< LabeledEdge > fEdges = fPhrases_.findEdges(f,maxLen);
     for(int i = 0; i < (int)eEdges.size(); i++) {
         const LabeledEdge & ee = eEdges[i];
         for(int j = 0; j < (int)fEdges.size(); j++) {
@@ -334,7 +355,7 @@ void PIAlign::addGenerativeProbs(const WordString & e, const WordString & f, Par
 }
 
 // add up the probabilities forward
-void PIAlign::addForwardProbs(int eLen, int fLen, ParseChart & chart, Prob pWidth, int hWidth, JobDetails & jd) const {
+void PIAlign::addForwardProbs(int eLen, int fLen, ParseChart & chart, const LookAhead & look, Prob pWidth, int hWidth, JobDetails & jd) const {
 
     Span yourSpan;
     Prob myProb, yourProb;
@@ -342,7 +363,7 @@ void PIAlign::addForwardProbs(int eLen, int fLen, ParseChart & chart, Prob pWidt
     // loop through all the agendas
     for(int l = 1; l < L; l++) {
         // get the beam and trim it to the appropriate size
-        ProbSpanSet spans = chart.getTrimmedAgenda(l,hWidth,pWidth);
+        ProbSpanSet spans = chart.getTrimmedAgenda(l,hWidth,pWidth,look);
         int i, spanSize = spans.size();
         // cerr << "At length "<< l<<", processing "<< spanSize << " values"<<endl;
         for(i = 0; i < spanSize; i++) {
@@ -437,8 +458,8 @@ string PIAlign::printSpan(const WordString & e, const WordString & f, const Span
 // sample a span
 SpanNode * PIAlign::sampleTree(int sent, const Span & mySpan, const ParseChart & chart, const SpanProbMap & genChart, const SpanProbMap & baseChart, bool add = true) const {
     int s=mySpan.es,t=mySpan.ee,u=mySpan.fs,v=mySpan.fe;
-    const WordString & e = eCorpus_[sent], f = fCorpus_[sent];
-    bool bracket = add;
+    // const WordString & e = eCorpus_[sent], f = fCorpus_[sent];
+    // bool bracket = add;
     // reserve the probabilities
     int maxSize = (t-s+1)*(v-u+1);
     
@@ -515,8 +536,8 @@ SpanNode * PIAlign::sampleTree(int sent, const Span & mySpan, const ParseChart &
 }
 
 // add a single sentence sample
-SpanNode * PIAlign::buildSample(int sent, ParseChart & chart, Prob pWidth, int hWidth, JobDetails & jd) const {
-    timeval tStart, tInit, tBase, tGen, tFor, tSamp;
+SpanNode * PIAlign::buildSample(int sent, ParseChart & chart, LookAhead * lookAhead, Prob pWidth, int hWidth, JobDetails & jd) const {
+    timeval tStart, tInit, tBase, tGen, tLook, tFor, tSamp;
     const WordString & e = eCorpus_[sent], & f = fCorpus_[sent];
     Span sentSpan(0,e.length(),0,f.length());
 
@@ -542,15 +563,19 @@ SpanNode * PIAlign::buildSample(int sent, ParseChart & chart, Prob pWidth, int h
     addGenerativeProbs(e,f,chart,genChart);
     gettimeofday(&tGen, NULL);
 
+    // calculate the lookahead
+    lookAhead->preCalculate(e,f,baseChart,genChart);
+    gettimeofday(&tLook, NULL);
+
     // add the probabilities forward
     SpanNode* head;
     int eLen = e.length(), fLen = f.length();
-    addForwardProbs(eLen, fLen, chart, pWidth, hWidth, jd);
+    addForwardProbs(eLen, fLen, chart, *lookAhead, pWidth, hWidth, jd);
     Prob myLik = chart.getFromChart(sentSpan)+model_->calcSentProb(sentSpan);
     if(myLik <= NEG_INFINITY) {
         cerr << "WARNING: parsing failed! loosening beam to hist="<<histWidth_<<", prob="<<probWidth_<<endl;
         chart.setDebug(1); // base_->setDebug(1); model_->setDebug(1);
-        head = buildSample(sent,chart,pWidth+log(10),hWidth*2,jd);
+        head = buildSample(sent,chart,lookAhead,pWidth+log(10),hWidth*2,jd);
         chart.setDebug(0); // base_->setDebug(0); model_->setDebug(0);
         return head;
     }
@@ -566,7 +591,8 @@ SpanNode * PIAlign::buildSample(int sent, ParseChart & chart, Prob pWidth, int h
     jd.timeInit += timeDifference(tStart,tInit);
     jd.timeBase += timeDifference(tInit,tBase);
     jd.timeGen += timeDifference(tBase,tGen);
-    jd.timeFor += timeDifference(tGen,tFor);
+    jd.timeLook += timeDifference(tGen,tLook);
+    jd.timeFor += timeDifference(tLook,tFor);
     jd.timeSamp += timeDifference(tFor,tSamp);
 
     return head;
@@ -620,7 +646,7 @@ void PIAlign::printPhraseTable(ostream & ptos) {
                         " " << jProbs[it->second] <<
                         " " << dProbs[it->second];
                 // if we are using model one, output lexical translation probabilities as well
-                if(baseType_ != BASE_UNI) {
+                if(baseType_ == BASE_MODEL1 || baseType_ == BASE_MODEL1G) {
                     ptos << " " << ((BaseModelOne*)base_)->phraseModelOne(estr,fstr) << 
                             " " << ((BaseModelOne*)base_)->phraseModelOne(fstr,estr); 
                 }
@@ -647,9 +673,10 @@ void* buildSamples(void* ptr) {
     BuildJob* job = (BuildJob*)ptr;
     PIAlign * pia = job->pialign;
     for(vector<int>::iterator s = job->begin; s != job->end; s++) {
-        SpanNode* node = pia->buildSample(*s,job->chart,pia->getProbWidth(),pia->getHistWidth(),job->details);
+        SpanNode* node = pia->buildSample(*s,job->chart,job->lookAhead,pia->getProbWidth(),pia->getHistWidth(),job->details);
         pia->setNode(*s,node);
     }
+    return NULL;
 }
 
 // do the whole training
@@ -707,7 +734,7 @@ void PIAlign::train() {
         cerr << endl;
         
         // main loop, sample all values
-        int sents=0,lastSent=0,s;
+        int sents=0,lastSent=0;
         for(int beginSent = 0; beginSent < (int)sentOrder.size(); beginSent += batchLen_) {
             vector<int>::iterator beginIter = sentOrder.begin()+beginSent;
             int myBatch = min(batchLen_,(int)sentOrder.size()-beginSent);

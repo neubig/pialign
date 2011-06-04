@@ -17,13 +17,13 @@ void ParseChart::initialize(int eLen, int fLen) {
 }
 
 // trim and return an agenda
-ProbSpanSet ParseChart::getTrimmedAgenda(int l, int histWidth, Prob probWidth) { 
+ProbSpanSet ParseChart::getTrimmedAgenda(int l, int histWidth, Prob probWidth, const LookAhead & look) { 
     SpanSet & agenda = agendas_[l-1];
     // build the beam
     ProbSpanSet ret;
     ret.reserve(agenda.size());
     for(SpanSet::const_iterator it = agenda.begin(); it != agenda.end(); it++)
-        ret.push_back(ProbSpan(getFromChart(*it),*it));
+        ret.push_back(ProbSpan(getFromChart(*it)+look.getLookAhead(*it),*it));
     // trim the beam if necessary
     if(probWidth != 0 || (histWidth != 0 && (int)agenda.size() > histWidth)) {
         int i, myMax = ret.size();

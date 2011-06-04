@@ -16,8 +16,9 @@ int er(const char* func, const char* err) {
 }
 
 WordString makeWS(int l) {
-    WordString ws(l); 
-    for(int i = 0; i < l; i++) ws[i] = i;
+    WordId wid[l];
+    WordString ws(wid,l); 
+    for(int i = 0; i < l; i++) wid[i] = i;
     return ws;
 }
 
@@ -57,7 +58,7 @@ int testModel(ProbModel & mod, int phraseCount) {
     // test adding a sample
     SpanNode * head = getSpanNode();
     mod.addSentence(e,f,head,ep,fp,jp);
-    if(jp.size() != phraseCount) { 
+    if((int)jp.size() != phraseCount) { 
         cerr << jp.size() << " != " << phraseCount << endl; 
         return er("testModel","unexpected number of phrases"); 
     }
@@ -93,6 +94,7 @@ int testLengthModel() {
     cerr << "LengthModel: ";
     return testModel(mod, 5);
 }
+
 
 int main(int argc, const char** argv) {
     int passed = 0, total = 0;

@@ -3,6 +3,7 @@
 
 #include <vector>
 #include "pialign/definitions.h"
+#include "pialign/look-base.h"
 
 namespace pialign {
 
@@ -34,33 +35,35 @@ public:
         return (t*(t+1)/2+s)*eMultiplier_+v*(v+1)/2+u;
     } 
 
-    inline void addToChart(int s, int t, int u, int v, Prob p, int idx, int len) {
+    inline Prob addToChart(int s, int t, int u, int v, Prob p, int idx, int len) {
 #ifdef DEBUG_ON
         if(len == 0)
             throw std::runtime_error("ParseChart attempted to add an empty span");
         if(p != p)
             throw std::runtime_error("ParseChart attempted to add nan value");
 #endif
+        Prob ret;
         if((*this)[idx] <= NEG_INFINITY) {
             agendas_[len-1].push_back(Span(s,t,u,v));
-            (*this)[idx] = p;
+            ret = p;
         }
         else
-            (*this)[idx] = addLogProbs((*this)[idx],p);
+            ret = addLogProbs((*this)[idx],p);
+        (*this)[idx] = ret;
 #ifdef DEBUG_ON
         if( p <= NEG_INFINITY || p > 0 )
             throw std::runtime_error("ParseChart Attempted to add illegal probability");
         if(debug_)
             std::cerr << "addToChart(Span("<<s<<","<<t<<","<<u<<","<<v<<"), "<<p<<") == " << (*this)[idx] <<std::endl;
 #endif
-
+        return ret;
     }
 
-    inline void addToChart(int s, int t, int u, int v, Prob p) {
-        addToChart(s,t,u,v,p,findChartPosition(s,t,u,v),v - u + t - s);
+    inline Prob addToChart(int s, int t, int u, int v, Prob p) {
+        return addToChart(s,t,u,v,p,findChartPosition(s,t,u,v),v - u + t - s);
     }
-    inline void addToChart(const Span & s, Prob p) {
-        addToChart(s.es,s.ee,s.fs,s.fe,p);
+    inline Prob addToChart(const Span & s, Prob p) {
+        return addToChart(s.es,s.ee,s.fs,s.fe,p);
     }
 
     inline Prob getFromChart(int s, int t, int u, int v) const {
@@ -81,7 +84,7 @@ public:
     void initialize(int eLen, int fLen);
 
     // trim and return an agenda
-    ProbSpanSet getTrimmedAgenda(int l, int histWidth, Prob probWidth);
+    ProbSpanSet getTrimmedAgenda(int l, int histWidth, Prob probWidth, const LookAhead & look);
 
     void setDebug(int debug) { debug_ = debug; }
 

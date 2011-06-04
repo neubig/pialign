@@ -241,14 +241,10 @@ inline bool operator!=(const GenericString<GenericChar> & a, const GenericString
     return !(a==b);
 }
 
-
-// hashing using the djb2 algorithm
-//  found at
-//  http://www.cse.yorku.ca/~oz/hash.html
-template <class GenericChar>
-class GenericStringHash {
+template <class T>
+class GenericHash {
 public:
-    size_t operator()(const GenericString<GenericChar> & x) const {
+    size_t operator()(const T & x) const {
         return x.getHash();
     }
 };
