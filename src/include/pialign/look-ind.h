@@ -13,11 +13,14 @@ class LookAheadInd : public LookAhead {
 protected:
 
     std::vector<Prob> eFor_, eBack_, fFor_, fBack_, eBuff_, fBuff_;
+    bool add_;
     
 public:
 
-    LookAheadInd() { }
+    LookAheadInd() : add_(false) { }
     ~LookAheadInd() { }
+
+    void setAdd(bool add) { add_ = add; }
 
     Prob getLookAhead(const Span & s) const {
         return std::min(eFor_[s.es]+eBack_[s.ee],fFor_[s.fs]+fBack_[s.fe]);
@@ -35,11 +38,16 @@ public:
     void addForProbs(const std::vector<Prob> & buff, std::vector<Prob> & forward, int len) {
         std::fill(forward.begin(),forward.end(),NEG_INFINITY);
         forward[0] = 0;
-        for(int end = 1; end <= len; end++)
-            for(int start = 0; start < end; start++) {
-                // std::cerr << "forward["<<end<<"] = std::max(forward["<<end<<"]=="<<forward[end]<<",forward["<<start<<"]=="<<forward[start]<<"+getSpan("<<start<<","<<end<<","<<len<<",buff)=="<<getSpan(start,end,len,buff)<<")"<<std::endl;
-                forward[end] = std::max(forward[end],forward[start]+getSpan(start,end,len,buff));
-            }
+        if(!add_) {
+            for(int end = 1; end <= len; end++)
+                for(int start = 0; start < end; start++)
+                    forward[end] = std::max(forward[end],forward[start]+getSpan(start,end,len,buff));
+        } else {
+            for(int end = 1; end <= len; end++)
+                for(int start = 0; start < end; start++)
+                    forward[end] = addLogProbs(forward[end],forward[start]+getSpan(start,end,len,buff));
+        }
+            
         // // --- print ---
         // std::cerr << "Forward:";
         // for(int i = 0; i <= len; i++)
@@ -49,9 +57,15 @@ public:
     void addBackProbs(const std::vector<Prob> & buff, std::vector<Prob> & backward, int len) {
         std::fill(backward.begin(),backward.end(),NEG_INFINITY);
         backward[len] = 0;
-        for(int start = len-1; start >= 0; start--)
-            for(int end = start+1; end <= len; end++)
-                backward[start] = std::max(backward[start],backward[end]+getSpan(start,end,len,buff));
+        if(!add_) {
+            for(int start = len-1; start >= 0; start--)
+                for(int end = start+1; end <= len; end++)
+                    backward[start] = std::max(backward[start],backward[end]+getSpan(start,end,len,buff));
+        } else {
+            for(int start = len-1; start >= 0; start--)
+                for(int end = start+1; end <= len; end++)
+                    backward[start] = addLogProbs(backward[start],backward[end]+getSpan(start,end,len,buff));
+        }
         // // --- print ---
         // std::cerr << "Backward:";
         // for(int i = 0; i <= len; i++)

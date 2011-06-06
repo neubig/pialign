@@ -23,29 +23,40 @@ class PIAlign;
 class JobDetails {
 public:
     Prob likelihood;
-    int words;
+    int words,sentences;
     int totalBeam, totalBeamTimes;
+    std::vector<int> beamWidths; // DEBUG
     double timeInit, timeBase, timeGen, timeLook, timeFor, timeSamp, timeRemove, timeAll;
     void reset() {
-        likelihood = 0; words = 0;
+        likelihood = 0; words = 0; sentences=0;
         totalBeam = 0; totalBeamTimes = 0;
         timeRemove = 0; timeInit = 0; timeBase = 0;
         timeGen = 0; timeLook = 0; timeFor = 0; timeSamp = 0; timeAll = 0;
+        fill(beamWidths.begin(), beamWidths.end(), 0);
     }
     JobDetails & operator+=(const JobDetails &rhs) {
         likelihood += rhs.likelihood; words += rhs.words;
+        sentences += rhs.sentences;
         totalBeam += rhs.totalBeam; totalBeamTimes += rhs.totalBeamTimes;
         timeRemove += rhs.timeRemove; timeInit += rhs.timeInit; 
         timeBase += rhs.timeBase; timeGen += rhs.timeGen;
         timeLook += rhs.timeLook; 
         timeFor += rhs.timeFor; timeSamp += rhs.timeSamp; 
         timeAll += rhs.timeAll;
+        if(beamWidths.size() < rhs.beamWidths.size())
+            beamWidths.resize(rhs.beamWidths.size());
+        for(unsigned i = 0; i < rhs.beamWidths.size(); i++)
+            beamWidths[i] += rhs.beamWidths[i];
         return *this;
     }
     void printStats(std::ostream & out) {
         out << " Likelihood="<< likelihood/words <<std::endl;       
         out << " Time="<<timeAll<<"s (r="<<timeRemove<<", i="<<timeInit<<", b="<<timeBase<<", g="<<timeGen<<", l="<<timeLook<<", f="<<timeFor<<", s="<<timeSamp<<")"<<std::endl;
         out << " Avg. Beam="<<(double)totalBeam/totalBeamTimes<<std::endl;
+        out << " Beam widths:";
+        for(unsigned i = 1; i < beamWidths.size(); i++)
+            out << " "<<i<<"="<<(double)beamWidths[i]/sentences;
+        out << std::endl;
     }
 };
 
@@ -87,6 +98,7 @@ protected:
     int lookType_;             // which look-ahead to use (default LOOK_NONE)
     static const int LOOK_NONE = 0;
     static const int LOOK_IND = 1;
+    static const int LOOK_INDADD = 2;
 
     int modelType_;        // which model to use
     static const int MODEL_HIER = 0;

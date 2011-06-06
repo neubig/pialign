@@ -157,6 +157,7 @@ void PIAlign::loadConfig(int argc, const char** argv) {
                 ++i;
                 if(!strcmp(argv[i],"none")) lookType_ = LOOK_NONE;
                 else if(!strcmp(argv[i],"ind")) lookType_ = LOOK_IND;
+                else if(!strcmp(argv[i],"indadd")) lookType_ = LOOK_INDADD;
                 else {
                     ostringstream oss;
                     oss << "Unknown base argument "<<argv[i];
@@ -268,8 +269,11 @@ void PIAlign::loadCorpora() {
         // make the look-ahead
         if(lookType_ == LOOK_NONE)
             buildJobs_[i].lookAhead = new LookAheadNone();
-        else
+        else if(lookType_ == LOOK_IND || lookType_ == LOOK_INDADD) {
             buildJobs_[i].lookAhead = new LookAheadInd();
+            if(lookType_ == LOOK_INDADD)
+                ((LookAheadInd*)buildJobs_[i].lookAhead)->setAdd(true);
+        }
     }
 	model_->setMaxLen(maxLen);
 
@@ -360,6 +364,7 @@ void PIAlign::addForwardProbs(int eLen, int fLen, ParseChart & chart, const Look
     Span yourSpan;
     Prob myProb, yourProb;
     int L = eLen+fLen,yourMax,s,t,u,v,S,U;
+    if((int)jd.beamWidths.size() < L) jd.beamWidths.resize(L);
     // loop through all the agendas
     for(int l = 1; l < L; l++) {
         // get the beam and trim it to the appropriate size
@@ -429,9 +434,13 @@ void PIAlign::addForwardProbs(int eLen, int fLen, ParseChart & chart, const Look
         for(int j = 0; j < i; j++)
             chart[chart.findChartPosition(spans[j].second)] = spans[j].first;
         
+        // cerr << "added beam of "<<i<<" at "<<l<<endl;
+        jd.beamWidths[l] += i;
         jd.totalBeam += i;
         jd.totalBeamTimes++;
     }
+    // std::cerr << "adding sentence" << std::endl;
+    jd.sentences++;
 }
 
 void PIAlign::printSpan(const WordString & e, const WordString & f, const Span & mySpan, ostream & out, const char* phraseSep, const char* wordSep, const char* phraseBeg, const char* phraseEnd) const {
