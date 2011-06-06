@@ -566,6 +566,11 @@ SpanNode * PIAlign::buildSample(int sent, ParseChart & chart, LookAhead * lookAh
     gettimeofday(&tInit, NULL);
     // add the base probabilities
     base_->addBases(e, f, *model_, chart, baseChart);
+    // for(SpanProbMap::iterator it = baseChart.begin(); it != baseChart.end(); it++) {
+    //     cerr << "Base: ";
+    //     printSpan(e,f,it->first,cerr);
+    //     cerr <<" == "<<it->second<<endl;
+    // }
     gettimeofday(&tBase, NULL);
 
     // add the generative probabilities
@@ -682,6 +687,7 @@ void* buildSamples(void* ptr) {
     BuildJob* job = (BuildJob*)ptr;
     PIAlign * pia = job->pialign;
     for(vector<int>::iterator s = job->begin; s != job->end; s++) {
+        // cerr << "Sentence "<<*s<<endl;
         SpanNode* node = pia->buildSample(*s,job->chart,job->lookAhead,pia->getProbWidth(),pia->getHistWidth(),job->details);
         pia->setNode(*s,node);
     }

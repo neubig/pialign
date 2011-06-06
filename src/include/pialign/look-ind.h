@@ -23,6 +23,9 @@ public:
     void setAdd(bool add) { add_ = add; }
 
     Prob getLookAhead(const Span & s) const {
+       // std::cerr << "min(eFor_[" << s.es << "]+eBack_["<<s.ee<<"], fFor_[" << s.fs << "]+fBack_["<<s.fe<<"]) == "<<
+       //     " min("<<eFor_[s.es]<<"+"<<eBack_[s.ee]<<","<<fFor_[s.fs]<<"+"<<fBack_[s.fe]<<") == "<<
+       //     std::min(eFor_[s.es]+eBack_[s.ee],fFor_[s.fs]+fBack_[s.fe]) << std::endl;
         return std::min(eFor_[s.es]+eBack_[s.ee],fFor_[s.fs]+fBack_[s.fe]);
     }
     
@@ -66,6 +69,7 @@ public:
                 for(int end = start+1; end <= len; end++)
                     backward[start] = addLogProbs(backward[start],backward[end]+getSpan(start,end,len,buff));
         }
+
         // // --- print ---
         // std::cerr << "Backward:";
         // for(int i = 0; i <= len; i++)

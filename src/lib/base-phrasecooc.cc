@@ -16,13 +16,14 @@ void BasePhraseCooc::substringMatrix(Corpus & corp, const WordSymbolSet & vocab,
     vector<int> R (T.size());
     vector<int> D (T.size());
     int nodeNum = 0;
+    vector<int> sids = corp.getSentIds();
+    int numSents = sids[sids.size()-1];
     if (esaxx(T.begin(), SA.begin(), 
           L.begin(), R.begin(), D.begin(), 
-          (int)T.size(), (int)vocab.size()+boost+1, nodeNum) == -1){
+          (int)T.size(), (int)vocab.size()+boost+numSents+1, nodeNum) == -1){
         throw std::runtime_error("could not make suffix tree");
     }
     // add every string that appears at least twice, and its sentences
-    vector<int> sids = corp.getSentIds();
     for (int i = 0; i < nodeNum; ++i) {
         int beg = SA[L[i]];
         if(D[i] > 0) {
@@ -32,7 +33,7 @@ void BasePhraseCooc::substringMatrix(Corpus & corp, const WordSymbolSet & vocab,
             int type = (SA[L[i]]==0||sids[SA[L[i]]]!=sids[SA[L[i]]-1])?-1:T[SA[L[i]]-1];
             for(int j = L[i]; j < R[i]; j++) {
                 int myType = (SA[j]==0||sids[SA[j]]!=sids[SA[j]-1])?-1:T[SA[j]-1];
-                leftDiff = leftDiff || myType != type;
+                leftDiff = leftDiff || myType != type || myType == -1;
                 if(sids[SA[j]] == sids[SA[j]+D[i]-1] && corp[sids[SA[j]]].length() != 0)
                     mySents.insert(sids[SA[j]]);
             }
@@ -68,8 +69,9 @@ void BasePhraseCooc::trainCooc(Corpus & es, const WordSymbolSet & eVocab, Corpus
     for(unsigned i = 0; i < eSents.size(); i++) {
         Counter<int,int> myCounts;
         for(set<int>::const_iterator eit = eSents[i].begin(); eit != eSents[i].end(); eit++) {
-            for(vector<int>::const_iterator fit = fWords[*eit].begin(); fit != fWords[*eit].end(); fit++)
+            for(vector<int>::const_iterator fit = fWords[*eit].begin(); fit != fWords[*eit].end(); fit++) {
                 myCounts.inc(*fit);
+            }
         }
         for(Counter<int,int>::const_iterator cit = myCounts.begin(); cit != myCounts.end(); cit++) {
             if(cit->second > coocDisc) {
