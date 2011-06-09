@@ -38,15 +38,16 @@ void LengthModel::addSentence(const WordString & e, const WordString & f, SpanNo
         addSentence(e,f,node->right,ePhrases,fPhrases,pairs);
     } else
         toAdd = TYPE_TERM;
-    addType(toAdd,idx);
     // find the left and right nodes
     WordId lId = (node->left?node->left->phraseid:-1),
             rId = (node->right?node->right->phraseid:-1);
     // add the appropriate values for the derivation
     if(node->type == TYPE_GEN)
         sepPhrases_[idx].addExisting(node->phraseid);
-    else
+    else {
+        addType(toAdd,idx);
         sepPhrases_[idx].addNew(node->phraseid,lId,rId,toAdd);
+    }
     addAverageDerivation(node->phraseid,sepPhrases_[idx].getTotal(node->phraseid),node->prob);
 }
 
