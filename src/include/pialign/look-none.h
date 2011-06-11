@@ -15,7 +15,7 @@ public:
 
     Prob getLookAhead(const Span & s) const { return 0; }
 
-    void preCalculate(const WordString & e, const WordString & f, const SpanProbMap & baseChart, const SpanProbMap & genChart) { }
+    void preCalculate(const WordString & e, const WordString & f, const SpanProbMap & base, const SpanProbMap & gen, const ParseChart & chart) { }
     
 
 };

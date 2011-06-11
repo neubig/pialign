@@ -35,6 +35,7 @@ public:
     
     Prob calcBaseProb(const Span & mySpan, Prob baseMeas) const {
         int idx = mySpan.length()-1;
+        PRINT_DEBUG("LengthModel::calcBaseProb"<<mySpan<<" == "<<sepFallbacks_[idx]<<"+"<<sepType_[idx][TYPE_TERM]<<"+"<<baseMeas<<" == "<<sepFallbacks_[idx]+sepType_[idx][TYPE_TERM]+baseMeas<<std::endl);
         return sepFallbacks_[idx]+sepType_[idx][TYPE_TERM]+baseMeas;
     }
 
@@ -44,6 +45,7 @@ public:
         if(idx == 0)
             throw std::runtime_error("illegal value in calcTreeProb");
 #endif
+        PRINT_DEBUG("LengthModel::calcTreeProb("<<mySpan<<","<<myProb<<","<<yourSpan<<","<<yourProb<<","<<type<<") == "<<sepFallbacks_[idx]<<"+"<<sepSplits_[idx]<<"+"<<sepType_[idx][type]<<"+"<<myProb<<"+"<<yourProb<<" == "<<sepFallbacks_[idx]+sepSplits_[idx]+sepType_[idx][type]+myProb+yourProb<<std::endl);
         return sepFallbacks_[idx]+sepSplits_[idx]+sepType_[idx][type]+myProb+yourProb;
     }
     inline int saveIdx(WordId jId, int index) {
@@ -52,38 +54,14 @@ public:
         return (phraseIdxs_[jId] = index);
     }
 
-    // void addGen(WordId jId, const Span & mySpan, Prob prob) {
-    //     int idx = saveIdx(jId,mySpan.length()-1);
-    //     // std::cerr << "addGen("<<jId<<") --> "<<idx<<std::endl;
-    //     sepPhrases_[idx].addExisting(jId);
-    //     addAverageDerivation(jId,sepPhrases_[idx].getTotal(jId),prob);
-    // }
-
-    // void addBase(WordId jId, const Span & mySpan, Prob prob) {
-    //     int idx = saveIdx(jId,mySpan.length()-1);
-    //     // std::cerr << "addBase("<<jId<<") --> "<<idx<<std::endl;
-    //     sepPhrases_[idx].addNew(jId,-1,-1,TYPE_TERM);
-    //     addAverageDerivation(jId,sepPhrases_[idx].getTotal(jId),prob);
-    //     addType(TYPE_TERM,idx);
-    // }
-
-    // void addTree(WordId jId, WordId lId, WordId rId, 
-    //             const Span & jSpan, const Span & lSpan, const Span & rSpan, 
-    //             int type, Prob prob) {
-    //     int idx = saveIdx(jId,jSpan.length()-1);
-    //     // std::cerr << "addTree("<<jId<<") --> "<<idx<<std::endl;
-    //     sepPhrases_[idx].addNew(jId, lId, rId, type);
-    //     addAverageDerivation(jId,sepPhrases_[idx].getTotal(jId),prob);
-    //     addType(type,idx);
-    // }
     
-    void addSentence(const WordString & e, const WordString & f, SpanNode* node, StringWordMap & ePhrases, StringWordMap & fPhrases, PairWordMap & pairs);
+    Prob addSentence(const WordString & e, const WordString & f, SpanNode* node, StringWordSet & ePhrases, StringWordSet & fPhrases, PairWordSet & pairs, std::vector<Prob>& baseProbs);
 
-    void removePhrasePair(WordId jId);
+    SpanNode* removePhrasePair(WordId jId, std::vector<Prob>& baseProbs);
 
-    void removeSentence(const SpanNode* node) {
-        if(!node) return;
-        removePhrasePair(node->phraseid);
+    SpanNode* removeSentence(const SpanNode* node, std::vector<Prob>& baseProbs) {
+        if(!node) return 0;
+        return removePhrasePair(node->phraseid, baseProbs);
     }
     
     void initialize(const WordString & e, const WordString & f, 
@@ -99,23 +77,44 @@ public:
 
     virtual void printStats(std::ostream &out) const;
 
-    void calcPhraseTable(const PairWordMap & jPhrases, std::vector<Prob> & eProbs, std::vector<Prob> & fProbs, std::vector<Prob> & jProbs, std::vector<Prob> & dProbs);
+    void calcPhraseTable(const PairWordSet & jPhrases, std::vector<Prob> & eProbs, std::vector<Prob> & fProbs, std::vector<Prob> & jProbs, std::vector<Prob> & dProbs);
 
-    inline void addType(WordId id, int idx) {
-        if(id == 0)
+    inline Prob addType(WordId id, int idx) {
+        Prob ret;
+        if(id == 0) {
+            ret = log(sepTerm_[idx].getProb(0));
             sepTerm_[idx].add(0);
-        else {
-            sepTerm_[idx].add(1);
-            sepFor_[idx].add(id-1);
         }
+        else {
+            ret = log(sepTerm_[idx].getProb(1)*sepFor_[idx].getProb(id-1));
+            sepTerm_[idx].add(1); sepFor_[idx].add(id-1);
+        }
+        // std::cerr << "addType("<<id<<","<<idx<<") == "<<ret<<std::endl;
+        return ret;
     }
-    inline void removeType(WordId id, int idx) {
-        if(id == 0)
+    inline Prob removeType(WordId id, int idx) {
+        Prob ret;
+        if(id == 0) {
             sepTerm_[idx].remove(0);
-        else {
-            sepTerm_[idx].remove(1);
-            sepFor_[idx].remove(id-1);
+            ret = log(sepTerm_[idx].getProb(0));
+        } else {
+            sepTerm_[idx].remove(1); sepFor_[idx].remove(id-1);
+            ret = log(sepTerm_[idx].getProb(1)*sepFor_[idx].getProb(id-1));
         }
+        // std::cerr << "removeType("<<id<<","<<idx<<") == "<<ret<<std::endl;
+        return ret;
+    }
+
+    // initialize probabilty buffers use to save computation time
+    void initializeBuffers() {
+
+        for(unsigned idx = 0; idx < sepType_.size(); idx++) {
+            sepType_[idx][0] = log(sepTerm_[idx].getProb(0));
+            sepType_[idx][1] = log(sepTerm_[idx].getProb(1)*sepFor_[idx].getProb(0));
+            sepType_[idx][2] = log(sepTerm_[idx].getProb(1)*sepFor_[idx].getProb(1));
+            sepFallbacks_[idx] = log(sepPhrases_[idx].getFallbackProb());
+        }
+
     }
 
 };

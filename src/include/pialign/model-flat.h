@@ -25,19 +25,17 @@ public:
     }
     
     Prob calcBaseProb(const Span & mySpan, Prob baseMeas) const {
-#ifdef DEBUG_ON
-        if(debug_)
-            std::cerr << "FlatModel::calcBaseProb @ "<<mySpan<<" ("<<typeProbs_[TYPE_TERM]<<"+"<<((!isNull(mySpan)||rememberNull_)?phraseFallback_:0)<<"+"<<baseMeas<<") == "<<typeProbs_[TYPE_TERM]+baseMeas+((!isNull(mySpan)||rememberNull_)?phraseFallback_:0)<<std::endl;
-#endif
+        PRINT_DEBUG("FlatModel::calcBaseProb @ "<<mySpan<<" ("<<typeProbs_[TYPE_TERM]<<"+"<<((!isNull(mySpan)||rememberNull_)?phraseFallback_:0)<<"+"<<baseMeas<<") == "<<typeProbs_[TYPE_TERM]+baseMeas+((!isNull(mySpan)||rememberNull_)?phraseFallback_:0)<<std::endl);
         return typeProbs_[TYPE_TERM]+baseMeas+(!isNull(mySpan)||rememberNull_?phraseFallback_:0);
     }
     Prob calcTreeProb(const Span & mySpan, Prob myProb, const Span & yourSpan, Prob yourProb, int type) const {
+        PRINT_DEBUG("FlatModel::calcTree("<<mySpan<<"/"<<yourSpan<<") == " <<typeProbs_[type]<<"+"<<myProb<<"+"<<yourProb<<" == "<<typeProbs_[type]+myProb+yourProb<<std::endl);
         return typeProbs_[type]+myProb+yourProb;
     }
 
-    void addSentence(const WordString & e, const WordString & f, SpanNode* node, StringWordMap & ePhrases, StringWordMap & fPhrases, PairWordMap & pairs);
+    Prob addSentence(const WordString & e, const WordString & f, SpanNode* node, StringWordSet & ePhrases, StringWordSet & fPhrases, PairWordSet & pairs, std::vector<Prob>& baseProbs);
 
-    void removeSentence(const SpanNode* node);
+    SpanNode* removeSentence(const SpanNode* node, std::vector<Prob>& baseProbs);
 
 };
 

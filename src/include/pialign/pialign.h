@@ -23,26 +23,30 @@ class PIAlign;
 class JobDetails {
 public:
     Prob likelihood;
-    int words,sentences;
+    int words,sentences,accepted;
     int totalBeam, totalBeamTimes;
     std::vector<int> beamWidths; // DEBUG
     double timeInit, timeBase, timeGen, timeLook, timeFor, timeSamp, timeRemove, timeAll;
+    Prob oldProp, newProp, chartProb;
     void reset() {
-        likelihood = 0; words = 0; sentences=0;
+        likelihood = 0; words = 0; sentences=0; accepted=0;
         totalBeam = 0; totalBeamTimes = 0;
         timeRemove = 0; timeInit = 0; timeBase = 0;
         timeGen = 0; timeLook = 0; timeFor = 0; timeSamp = 0; timeAll = 0;
+        oldProp = 0; newProp = 0; chartProb = 0;
         fill(beamWidths.begin(), beamWidths.end(), 0);
     }
     JobDetails & operator+=(const JobDetails &rhs) {
         likelihood += rhs.likelihood; words += rhs.words;
-        sentences += rhs.sentences;
+        sentences += rhs.sentences; accepted += rhs.accepted;
         totalBeam += rhs.totalBeam; totalBeamTimes += rhs.totalBeamTimes;
         timeRemove += rhs.timeRemove; timeInit += rhs.timeInit; 
         timeBase += rhs.timeBase; timeGen += rhs.timeGen;
         timeLook += rhs.timeLook; 
         timeFor += rhs.timeFor; timeSamp += rhs.timeSamp; 
         timeAll += rhs.timeAll;
+        oldProp += rhs.oldProp; newProp += rhs.newProp;
+        chartProb += rhs.chartProb;
         if(beamWidths.size() < rhs.beamWidths.size())
             beamWidths.resize(rhs.beamWidths.size());
         for(unsigned i = 0; i < rhs.beamWidths.size(); i++)
@@ -52,11 +56,11 @@ public:
     void printStats(std::ostream & out) {
         out << " Likelihood="<< likelihood/words <<std::endl;       
         out << " Time="<<timeAll<<"s (r="<<timeRemove<<", i="<<timeInit<<", b="<<timeBase<<", g="<<timeGen<<", l="<<timeLook<<", f="<<timeFor<<", s="<<timeSamp<<")"<<std::endl;
-        out << " Avg. Beam="<<(double)totalBeam/totalBeamTimes<<std::endl;
-        out << " Beam widths:";
-        for(unsigned i = 1; i < beamWidths.size(); i++)
-            out << " "<<i<<"="<<(double)beamWidths[i]/sentences;
-        out << std::endl;
+        out << " Avg. Beam="<<(double)totalBeam/totalBeamTimes<<", Accepted="<<((double)accepted/sentences*100)<<"%"<<std::endl;
+        // out << " Beam widths:";
+        // for(unsigned i = 1; i < beamWidths.size(); i++)
+        //     out << " "<<i<<"="<<(double)beamWidths[i]/sentences;
+        // out << std::endl;
     }
 };
 
@@ -66,9 +70,17 @@ public:
     ParseChart chart;
     LookAhead* lookAhead;
     std::vector<int>::iterator begin, end;
+    std::vector<SpanNode*>::iterator beginOld, beginNew;
     pthread_t thread;
     PIAlign* pialign;
     JobDetails details;
+    
+    BuildJob() : lookAhead(0) { }
+    ~BuildJob() {
+        if(lookAhead)
+            delete lookAhead;
+    }
+
 };
 
 class PIAlign {
@@ -93,7 +105,6 @@ protected:
     int printMax_;         // the maximum phrase size to print  
     int printMin_;         // the minimum phrase size to print  
     int maxSentLen_;       // the maximum size of a sentence  
-    int histWidth_;        // the width of the histogram to use 
     Prob probWidth_;       // the width of the probability beam to use 
     int lookType_;             // which look-ahead to use (default LOOK_NONE)
     static const int LOOK_NONE = 0;
@@ -143,8 +154,8 @@ protected:
 
     // vocabs
     WordSymbolSet eVocab_, fVocab_;
-    StringWordMap ePhrases_, fPhrases_;
-    PairWordMap jointPhrases_;
+    StringWordSet ePhrases_, fPhrases_;
+    PairWordSet jointPhrases_;
 
     // models
     BaseMeasure* base_;
@@ -153,8 +164,10 @@ protected:
     // average derivations for each phrase pair
     //  (used in printing the phrase table)
     std::vector<Prob> derivations_;
+    // base measure probabilities for each phrase pair
+    std::vector<Prob> baseProbs_;
 
-    void trimPhraseDic(StringWordMap & dic, std::vector<WordId> & idMap);
+    void trimPhraseDic(StringWordSet & dic, std::vector<WordId> & idMap);
     void trim();
 
 public:
@@ -163,7 +176,7 @@ public:
     PIAlign() : samples_(1), sampRate_(1), burnIn_(9),
         babySteps_(1), babyStepLen_(0), annealSteps_(1), annealStepLen_(0), 
         batchLen_(1), numThreads_(1), shuffle_(true), wordIters_(0),
-        maxPhraseLen_(3), printMax_(7), printMin_(1), maxSentLen_(40), histWidth_(0), probWidth_(1e-10), lookType_(LOOK_NONE),
+        maxPhraseLen_(3), printMax_(7), printMin_(1), maxSentLen_(40), probWidth_(1e-10), lookType_(LOOK_NONE),
         modelType_(MODEL_HIER), forceWord_(true), avgPhraseLen_(0.01), nullProb_(0.01), 
         termStrength_(1), termPrior_(1.0/3.0),
         defDisc_(-1), defStren_(-1),
@@ -208,21 +221,23 @@ public:
     void addGenerativeProbs(const WordString & e, const WordString & f, ParseChart & chart, SpanProbMap & genChart) const;
 
     // add forward probabilities
-    void addForwardProbs(int eLen, int fLen, ParseChart & chart, const LookAhead & look, Prob pWidth, int hWidth, JobDetails & jd) const;
+    void addForwardProbs(int eLen, int fLen, ParseChart & chart, const SpanSet & preserve, const LookAhead & look, Prob pWidth, JobDetails & jd) const;
 
     // do the actual sampling
-    SpanNode * sampleTree(int sent, const Span & mySpan, const ParseChart & chart, const SpanProbMap & genChart, const SpanProbMap & baseChart, bool add) const;
+    std::pair<SpanNode*,Prob> sampleTree(int sent, const Span & mySpan, const ParseChart & chart, const SpanProbMap & genChart, const SpanProbMap & baseChart, bool add, SpanNode* actNode) const;
     
     // print a span
     void printSpan(const WordString & e, const WordString & f, const Span & mySpan, std::ostream & out, const char* phraseSep = " ||| ", const char* wordSep = " ", const char* phraseBeg = "((( ", const char* phraseEnd = " )))") const;
     std::string printSpan(const WordString & e, const WordString & f, const Span & mySpan, const char* phraseSep = " ||| ", const char* wordSep = " ",  const char* phraseBeg = "((( ", const char* phraseEnd = " )))") const;
 
     // *** sample algorithms
-    void removeSample(int s);
     // void *buildSamples(void* ptr);
-    SpanNode * buildSample(int s, ParseChart & chart, LookAhead * lookAhead, Prob pWidth, int hWidth, JobDetails & jd) const;
+    SpanNode * buildSample(int s, ParseChart & chart, LookAhead * lookAhead, Prob pWidth, JobDetails & jd, SpanNode* actNode) const;
     // WordId addSample(const WordString & e, const WordString & f, SpanNode * myNode);
     void printSample(const WordString & e, const WordString & f, const SpanNode * myNode, std::ostream & sampleOut);
+
+    void buildSpans(SpanNode* node);
+    void moveRight(SpanNode* node, int e, int f);
 
     // print the phrase table
     void printPhraseTable(std::ostream & os);
@@ -247,9 +262,7 @@ public:
     const WordString & getFSentence(int i) const { return fCorpus_[i]; }
     const Corpus & getFCorpus() const { return fCorpus_; }
     void setFCorpus(const Corpus & v) { fCorpus_ = v; }
-    int getHistWidth() const { return histWidth_; }
     Prob getProbWidth() const { return probWidth_; }
-    void setNode(int id, SpanNode * node) { nCorpus_[id] = node; }
 
 };
 

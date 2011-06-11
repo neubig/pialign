@@ -5,7 +5,7 @@ using namespace pialign;
 
 void BaseUnigram::addBases(const WordString & e, const WordString & f, const ProbModel & mod, ParseChart & chart, SpanProbMap & baseChart) const {
     int T = e.length(), V = f.length();
-    Prob eProb, fProb, myProb;
+    Prob eProb, fProb, noSym, yesSym;
     for(int s = 0; s <= T; s++) {
         eProb = 0;
         int actT = std::min(s+maxLen_,T);
@@ -17,10 +17,11 @@ void BaseUnigram::addBases(const WordString & e, const WordString & f, const Pro
                 for(int v = (s==t?u+1:u); v <= actV; v++) {
                     if(u != v) fProb += unigrams_[f[v-1]];
                     Span mySpan(s,t,u,v);
-                    myProb = mod.calcBaseProb(mySpan, uniPen_+fProb+eProb+poisProbs_[t-s]+poisProbs_[v-u]);
-                    // std::cerr << "BaseUnigram::calcBaseProb("<<uniPen_<<"+"<<fProb<<"+"<<eProb<<"+"<<poisProbs_[t-s]<<"+"<<poisProbs_[v-u]<<") == "<<myProb<<std::endl;
-                    chart.addToChart(mySpan,myProb); // add to the overall chart
-                    baseChart.insertProb(mySpan,myProb);       // add to the base chart
+                    noSym = uniPen_+fProb+eProb+poisProbs_[t-s]+poisProbs_[v-u];
+                    yesSym = mod.calcBaseProb(mySpan, noSym);
+                    // std::cerr << "BaseUnigram::calcBaseProb"<<mySpan<<" == "<<uniPen_<<"+"<<fProb<<"+"<<eProb<<"+"<<poisProbs_[t-s]<<"+"<<poisProbs_[v-u]<<" == "<<noSym<<" --> "<<yesSym<<std::endl;
+                    chart.addToChart(mySpan,yesSym); // add to the overall chart
+                    baseChart.insertProb(mySpan,noSym);       // add to the base chart
                 }
             }
         }

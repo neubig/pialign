@@ -19,21 +19,24 @@ public:
     }
     
     Prob calcBaseProb(const Span & mySpan, Prob baseMeas) const {
-#ifdef DEBUG_ON
-        if(debug_)
-            std::cerr << "HierModel::calcBaseProb("<<phraseFallback_<<"+"<<typeProbs_[TYPE_TERM]<<"+"<<baseMeas<<")"<<std::endl;
-#endif
+        PRINT_DEBUG(std::cerr << "HierModel::calcBaseProb("<<phraseFallback_<<"+"<<typeProbs_[TYPE_TERM]<<"+"<<baseMeas<<")"<<std::endl);
         return phraseFallback_+typeProbs_[TYPE_TERM]+baseMeas;
     }
     
     Prob calcTreeProb(const Span & mySpan, Prob myProb, const Span & yourSpan, Prob yourProb, int type) const {
-        // std::cerr << " HierModel::calcTreeProb @ "<<mySpan<<"/"<<yourSpan<<" == ("<<phraseFallback_<<","<<typeProbs_[type]<<","<<myProb<<","<<yourProb<<")"<<std::endl;
+        PRINT_DEBUG(" HierModel::calcTreeProb @ "<<mySpan<<"/"<<yourSpan<<" == ("<<phraseFallback_<<","<<typeProbs_[type]<<","<<myProb<<","<<yourProb<<")"<<std::endl);
         return phraseFallback_+typeProbs_[type]+myProb+yourProb;
     }
 
-    void addSentence(const WordString & e, const WordString & f, SpanNode* node, StringWordMap & ePhrases, StringWordMap & fPhrases, PairWordMap & pairs);
+    Prob addSentence(const WordString & e, const WordString & f, SpanNode* node, StringWordSet & ePhrases, StringWordSet & fPhrases, PairWordSet & pairs, std::vector<Prob>& baseProbs);
 
-    void removeSentence(const SpanNode* node);
+    SpanNode* removePhrasePair(WordId jId, std::vector<Prob>& baseProbs);
+
+    SpanNode* removeSentence(const SpanNode* head, std::vector<Prob>& baseProbs){
+        if(head == 0) return 0;
+        return removePhrasePair(head->phraseid,baseProbs);
+    }
+
     bool isHierarchical() { return true; }
         
     void printPhraseTable(const WordSymbolSet & eVocab, const WordSymbolSet & fVocab, std::ostream & ptos) {

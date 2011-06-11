@@ -1,6 +1,10 @@
 #ifndef PARSE_CHART_H__
 #define PARSE_CHART_H__
 
+namespace pialign {
+class ParseChart;
+}
+
 #include <vector>
 #include "pialign/definitions.h"
 #include "pialign/look-base.h"
@@ -70,7 +74,6 @@ public:
         return (*this)[findChartPosition(s,t,u,v)];
     }
     inline Prob getFromChart(const Span & s) const {
-        // cerr << "getFromChart("<<s.es<<","<<s.ee<<","<<s.fs<<","<<s.fe<<") == "<<(*this)[findChartPosition(s)]<<endl;
         return (*this)[findChartPosition(s)];
     }
     inline void removeFromChart(int s, int t, int u, int v) {
@@ -84,7 +87,7 @@ public:
     void initialize(int eLen, int fLen);
 
     // trim and return an agenda
-    ProbSpanSet getTrimmedAgenda(int l, int histWidth, Prob probWidth, const LookAhead & look);
+    ProbSpanVec getTrimmedAgenda(int l, Prob probWidth, const SpanSet & preserve, const LookAhead & look);
 
     void setDebug(int debug) { debug_ = debug; }
 

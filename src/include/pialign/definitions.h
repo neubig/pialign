@@ -2,7 +2,7 @@
 #define DEFINITIONS_H__
 
 // define this to perform checks and print debugging info
-// #define DEBUG_ON
+#define DEBUG_ON
 // define this to perform viterbi pushing of forward probabilities
 //  this is much faster, but may reduce accuracy
 // #define VITERBI_ON
@@ -22,6 +22,19 @@
 #include <cstdlib>
 #include <algorithm>
 #include <iostream>
+
+
+/* #define PRINT_DEBUG(msg) do {                   \
+     std::cerr << msg;                           \
+     }                                           \
+   while (0); */
+#define PRINT_DEBUG(msg)
+
+#define THROW_ERROR(msg) do {                   \
+    std::ostringstream oss;                     \
+    oss << msg;                                 \
+    throw std::runtime_error(oss.str()); }       \
+  while (0);
 
 #define NEG_INFINITY -1e99
 #define MIN_PROB 1e-99
@@ -98,8 +111,9 @@ public:
     int type; // the type of node that this is
     bool add; // whether this node was actually added to the distribution
     Prob prob; // the generative probability of this span
+    Prob baseProb; // the base (log) probability of the span
 
-    SpanNode(const Span & mySpan) : span(mySpan), left(0), right(0), phraseid(-1), type(0), add(true), prob(0) { }
+    SpanNode(const Span & mySpan) : span(mySpan), left(0), right(0), phraseid(-1), type(0), add(true), prob(0), baseProb(0) { }
     ~SpanNode() { 
         if(left) delete left;
         if(right) delete right;
@@ -168,16 +182,17 @@ inline bool operator==(const WordString & a, const WordString & b) {
 
 
 typedef gng::SymbolSet< std::string, WordId > WordSymbolSet;
-typedef gng::SymbolMap< std::pair<WordId, WordId>, WordId, PairHash<WordId> > PairWordMap;
+typedef gng::SymbolSet< std::pair<WordId, WordId>, WordId, PairHash<WordId> > PairWordSet;
 typedef std::tr1::unordered_map< std::pair<WordId, WordId>, Prob, PairHash<WordId> > PairProbMap;
 typedef gng::SymbolMap< Span, int, SpanHash > SpanSymbolMap;
-typedef std::vector< Span > SpanSet;
-typedef std::vector< SpanSet > Agendas; 
+typedef std::vector< Span > SpanVec;
+typedef std::tr1::unordered_set< Span, SpanHash > SpanSet;
+typedef std::vector< SpanVec > Agendas; 
 typedef std::pair<Prob, Span> ProbSpan;
-typedef std::vector< ProbSpan > ProbSpanSet;
+typedef std::vector< ProbSpan > ProbSpanVec;
 
 
-class StringWordMap : public gng::SymbolMap< WordString, WordId, gng::GenericHash<WordString> > {
+class StringWordSet : public gng::SymbolSet< WordString, WordId, gng::GenericHash<WordString> > {
 
 public:
       
@@ -188,10 +203,9 @@ public:
         for(int i = 0; i <= T; i++) {
             jLim = std::min(i+maxLen,T);
             for(int j = i; j <= jLim; j++) {
-                StringWordMap::const_iterator it = this->find(str.substr(i,j-i));
-                if(it != this->end()) {
-                    ret.push_back(LabeledEdge(i,j,it->second));
-                }
+                WordId wid = this->getId(str.substr(i,j-i));
+                if(wid >= 0) 
+                    ret.push_back(LabeledEdge(i,j,wid));
             }
         }
         return ret;
@@ -211,19 +225,34 @@ public:
     }
 };
 
+
 // sample a single set of probabilities
 inline int sampleProbs(std::vector<Prob> vec) {
     if(vec.size() == 0)
         throw std::runtime_error("Zero-size vector for sampling");
     if(vec.size() == 1)
         return 0;
-    Prob norm = 0;
-    for(unsigned i = 0; i < vec.size(); i++)
-        norm += vec[i];
     int ret = 0;
-    Prob left = (norm*rand())/RAND_MAX;
+    Prob left = ((Prob)rand())/RAND_MAX;
     while((left -= vec[ret]) > 0) ret++;
-    return ret;
+    return std::min(ret,(int)vec.size()-1);
+}
+
+// sample a single set of log probabilities
+//  return the sampled ID and the log probability of the sample
+inline void normalizeLogProbs(std::vector<Prob> & vec, double anneal = 1) {
+    // approximate the actual max with the front and back
+    Prob myMax = NEG_INFINITY, norm = 0, size = vec.size();
+    for(unsigned i = 0; i < size; i++) {
+        vec[i] *= anneal;
+        myMax = std::max(myMax,vec[i]);
+    }
+    for(unsigned i = 0; i < size; i++) {
+        vec[i] = exp(vec[i]-myMax);
+        norm += vec[i];
+    }
+    for(unsigned i = 0; i < size; i++)
+        vec[i] /= norm;
 }
 
 // sample a single set of log probabilities
@@ -246,7 +275,7 @@ inline int sampleLogProbs(Prob* vec, unsigned size, double anneal = 1) {
         ret++;
     }
     // std::cerr << "  sampleLogProbs ("<<norm<<","<<myMax<<"): r="<<ret<<", b="<<left+vec[ret]<<", a="<<left<<std::endl;
-    return ret;
+    return std::min(ret,(int)size-1);
 }
 inline int sampleLogProbs(std::vector<Prob> vec, double anneal = 1) {
     return sampleLogProbs(&vec[0],vec.size(),anneal);

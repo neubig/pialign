@@ -14,17 +14,11 @@ void BaseModelOne::combineBases(const WordString & e, const WordString & f, std:
             // add zero and one values values
             base[j-J] = nullProb;
             base[j] = getCond(myE,f[j]);
-#ifdef DEBUG_ON
-            if(debug_)
-                std::cerr << "combineBases("<<i<<","<<j<<") == "<<base[j]<<std::endl;
-#endif
+            PRINT_DEBUG("combineBases("<<i<<","<<j<<") == "<<base[j]<<std::endl)
         }
         for(int l = 1; l < maxLen_; l++)
             for(int j = 0; j < J-l; j++) {
-#ifdef DEBUG_ON
-                if(debug_)
-                    std::cerr << "combineBases("<<i<<","<<j<<","<<l<<") == ("<<base[j+(l-1)*J]<<"*"<<l<<"+"<<base[j+l]<<")/"<<(l+1)<<std::endl;
-#endif
+                PRINT_DEBUG("combineBases("<<i<<","<<j<<","<<l<<") == "<<base[j]<<std::endl);
                 base[j+l*J] = (base[j+(l-1)*J]*l+base[j+l])/(l+1);
             }
     }
@@ -35,7 +29,7 @@ void BaseModelOne::combineBases(const WordString & e, const WordString & f, std:
 void BaseModelOne::addBases(const WordString & e, const WordString & f, const ProbModel & mod, ParseChart & chart, SpanProbMap & baseChart) const {
     int T = e.length(), V = f.length();
     Prob l2 = log(2);
-    Prob eProb, fProb, myProb, fm1;
+    Prob eProb, fProb, noSym, yesSym, fm1;
     std::vector<Prob> em1s((V+1)*(maxLen_+1));
     std::vector<Prob> eComb, fComb;
     combineBases(e,f,eComb); combineBases(f,e,fComb);
@@ -58,18 +52,14 @@ void BaseModelOne::addBases(const WordString & e, const WordString & f, const Pr
                         em1 = (em1s[v*(maxLen_+1)+v-u] += eComb[(t-1)*V*(maxLen_+1)+(v-u)*V+u]);
                     Span mySpan(s,t,u,v);
                     // add model one probabilities 
-                    if(geometric_) {
-                        myProb = mod.calcBaseProb(mySpan,(em1+fProb+fm1+eProb)/2+poisProbs_[t-s]+poisProbs_[v-u]);
-                    }
-                    else {
-                        myProb = mod.calcBaseProb(mySpan,addLogProbs(em1+fProb,fm1+eProb)-l2+poisProbs_[t-s]+poisProbs_[v-u]);
-                    }
-#ifdef DEBUG_ON
-                    if(debug_)
-                        std::cerr << "calcBaseProb @ "<<mySpan<<", addLogProbs("<<em1<<"+"<<fProb<<","<<fm1<<"+"<<eProb<<")+"<<poisProbs_[t-s]<<"+"<<poisProbs_[v-u]<<") == "<<myProb<<std::endl;
-#endif
-                    chart.addToChart(mySpan,myProb); // add to the overall chart
-                    baseChart.insertProb(mySpan,myProb);       // add to the base chart
+                    if(geometric_) 
+                        noSym = (em1+fProb+fm1+eProb)/2+poisProbs_[t-s]+poisProbs_[v-u];
+                    else 
+                        noSym = addLogProbs(em1+fProb,fm1+eProb)-l2+poisProbs_[t-s]+poisProbs_[v-u];
+                    yesSym = mod.calcBaseProb(mySpan,noSym);
+                    // PRINT_DEBUG("calcBaseProb @ "<<mySpan<<", addLogProbs("<<em1<<"+"<<fProb<<","<<fm1<<"+"<<eProb<<")+"<<poisProbs_[t-s]<<"+"<<poisProbs_[v-u]<<") == "<<noSym<<" --> "<<yesSym<<std::endl);
+                    chart.addToChart(mySpan,yesSym);    // add to the overall chart
+                    baseChart.insertProb(mySpan,noSym); // add to the base chart
                 }
             }
         }
@@ -115,8 +105,6 @@ void BaseModelOne::trainModelOne(const Corpus & es, const Corpus & fs, int eSize
     int i,j,k,iter=0;
     Prob uniProb = 1.0/eSize;
     for(i = 0; i < (int)es.size(); i++) {
-        // cerr << "i="<<i<<", el="<<es[i].length()<<", fl="<<fs[i].length()<<endl;
-        // cerr << "i="<<i<<", j="<<j<<", k="<<k<<endl;
         for(j = 0; j < (int)es[i].length(); j++) {
             for(k = 0; k < (int)fs[i].length(); k++) {
                 std::pair<WordId,WordId> id(es[i][j],fs[i][k]);
@@ -141,7 +129,6 @@ void BaseModelOne::trainModelOne(const Corpus & es, const Corpus & fs, int eSize
         for(i = 0; i < (int)es.size(); i++) {
             if(es[i].length()*fs[i].length() == 0)
                 continue;
-            // cerr << "i="<<i<<", el="<<es[i].length()<<", fl="<<fs[i].length()<<endl;
             for(j = 0; j < (int)es[i].length(); j++) {
                 sTotal = 0;
                 // do words + null
@@ -160,16 +147,12 @@ void BaseModelOne::trainModelOne(const Corpus & es, const Corpus & fs, int eSize
                     norm = tBuff[k]/sTotal;
                     count[pBuff[k]] += norm;
                     total[pBuff[k].second] += norm;
-                    // std::cerr << "count["<<pBuff[k].first<<","<<pBuff[k].second<<"] += "<<norm<<" == "<<count[pBuff[k]]<<std::endl;
-                    // std::cerr << "total["<<pBuff[k].second<<"] += "<<norm<<" == "<<total[pBuff[k].second]<<std::endl;
                 }
             }
         }
         // M step
-        for(PairProbMap::iterator it = count.begin(); it != count.end(); it++) {
+        for(PairProbMap::iterator it = count.begin(); it != count.end(); it++)
             conds_[it->first] = it->second/total[it->first.second];
-            // std::cerr << "conds_["<<it->first.first<<","<<it->first.second<<"] == "<<it->second<<"/"<<total[it->first.second]<<" == "<<conds_[it->first]<<std::endl;
-        }
         std::cerr << " Iteration " << ++iter << ": likelihood "<<lik<<std::endl;
     } while(lastLik == 0.0 || (lastLik-lik) < lik * likCut);
 }

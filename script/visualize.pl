@@ -5,7 +5,7 @@ use strict;
 binmode STDOUT, ":utf8";
 
 if(@ARGV < 3 or @ARGV > 5) {
-    print "Usage: visualize.pl EFILE FFILE AFILE [ADDPOS] [REVERSE] < ALIGNMENTS\n";
+    print "Usage: visualize.pl EFILE FFILE AFILE [ADDPOS] [REVERSE]\n";
     exit 1;
 }
 

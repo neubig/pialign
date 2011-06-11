@@ -135,7 +135,11 @@ void BasePhraseCooc::addBases(const WordString & e, const WordString & f, const 
             if(it != jProbs_.end()) { 
                 // cerr << " found in jProbs (["<<ee.s<<","<<ee.e<<","<<ee.l<<"]/["<<fe.e<<","<<fe.s<<","<<fe.l<<"]) = "<<it->second<<endl;
                 Span s(ee.s, ee.e, fe.s, fe.e);
-                baseChart.insertProb(s, chart.addToChart(s,it->second));
+                // get the old base probability and add the new probability
+                SpanProbMap::const_iterator bit = baseChart.find(s);
+                Prob myProb = (bit == baseChart.end() ? it->second : addLogProbs(it->second,bit->second));
+                baseChart.insertProb(s, myProb);
+                chart.addToChart(s, mod.calcBaseProb(s,it->second));
             }
         }
     }

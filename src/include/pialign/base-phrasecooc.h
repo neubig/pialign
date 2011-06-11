@@ -12,7 +12,7 @@ class BasePhraseCooc : public BaseUnigram {
 protected:
 
     typedef std::vector< std::pair<int,int> > SuffixArray;
-    StringWordMap eSymbols_, fSymbols_;
+    StringWordSet eSymbols_, fSymbols_;
     PairProbMap jProbs_;
 
 public:

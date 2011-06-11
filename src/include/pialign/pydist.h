@@ -52,6 +52,7 @@ public:
         return (int)idx_.size() > id ? (idx_[id]).total : 0; 
     }
     PyTableSet<T> & addTableSet(T id) {
+        // std::cerr << "addTableSet("<<id<<"), size="<<idx_.size()<<std::endl;
         if((int)idx_.size() <= id) idx_.resize(id+1);
         return idx_[id];
     }
@@ -98,7 +99,6 @@ private:
     Prob spAlpha_, spBeta_, dpAlpha_, dpBeta_;
 
     // whether to delete tables recursively
-    bool isRecursive_;
     bool removedTable_;
 
     Prob stren_, disc_;
@@ -110,7 +110,7 @@ public:
 
     PyDist(Prob stren, Prob disc) : total_(0), tables_(0), counts_(), 
         spAlpha_(PRIOR_SA), spBeta_(PRIOR_SB), dpAlpha_(PRIOR_DA), dpBeta_(PRIOR_DB),
-        isRecursive_(true), removedTable_(false), stren_(stren), disc_(disc) { }
+        removedTable_(false), stren_(stren), disc_(disc) { }
 
     Prob getProb(T id, Prob base) const {
         const TSet * tab = counts_.getTableSet(id);
@@ -122,6 +122,7 @@ public:
     }
 
     Prob getFallbackProb() const {
+        // std::cerr << "("<<stren_<<"+"<<tables_<<"*"<<disc_<<")/("<<total_<<"+"<<stren_<<") == "<<(stren_+tables_*disc_)/(total_+stren_)<<std::endl;
         return (stren_+tables_*disc_)/(total_+stren_);
     }
 
@@ -147,12 +148,15 @@ public:
         return ret;
     }
 
+    // addExisting works when tables have been deleted and the total table
+    // count is zero, but there is still one cached
     void addExisting(T id) {
         TSet & set = counts_.addTableSet(id);
 #ifdef DEBUG_ON
-        if(set.total == 0)
+        if(set.size() == 0)
             throw std::runtime_error("PyDist::addExisting with no tables");
 #endif
+        // std::cerr << " pydist::addExisting("<<id<<")"<<std::endl;
         int mySize = set.size();
         TSetIter it = set.begin();
         if(mySize > 1) {
@@ -167,10 +171,13 @@ public:
     }
 
     void addNew(T id, T left = -1, T right = -1, T type = -1) {
-        // std::cerr << "addNew("<<id<<","<<left<<","<<right<<","<<type<<")"<<std::endl;
+        // std::cerr << " pydist::addNew("<<id<<","<<left<<","<<right<<","<<type<<")"<<std::endl;
+        if(type != TYPE_TERM && type != -1 && (left == -1 || right == -1))
+            throw std::runtime_error("No left and right for recursive definition");
         if(id == left || id == right)
             throw std::runtime_error("Recursive definition in addNew");
         TSet & set = counts_.addTableSet(id);
+        // std::cerr << " set.size() == "<<set.size()<<std::endl;
         set.push_back(PyTable<T>(1,left,right,type));
         set.total++;
         tables_++;
@@ -184,24 +191,21 @@ public:
         else
             addNew(id,left,right,type);
     }
-     
-    std::vector<T> remove(T id) {
-        // std::cerr << "Main remove " << id <<std::endl;
-        std::vector<T> ret;
-        recursiveRemove(id,ret);
-        return ret;
-    }
-    void recursiveRemove(T id, std::vector<T> & hist) {
-        if(id < 0) return;
+    
+    // remove one customer, return the probability of
+    //  the cache if removed from the cache
+    //  the fallback if removed from the base
+    Prob remove(T id) {
+        if(id < 0) return 0;
 #ifdef DEBUG_ON
         if(!counts_.getTableSet(id))
             throw std::runtime_error("Overflow in PyDist::remove"); 
 #endif
         removedTable_ = false;
+        Prob prob = 0;
         TSet & set = counts_.addTableSet(id);
         int mySize = set.size();
-        TSetIter it = set.begin();
-        
+        TSetIter it = set.begin(); 
         if(mySize > 1) {
             int left = (int)(((double)rand())/RAND_MAX*set.total);
             while((left -= it->count) >= 0)
@@ -216,14 +220,10 @@ public:
             PyTable<T> save = lastTable_;
             tables_--;
             set.erase(it);
-            if(isRecursive_) {
-                recursiveRemove(save.left, hist);
-                recursiveRemove(save.right, hist);
-            } 
-            if(lastTable_.type >= 0)
-                hist.push_back(save.type);
-        }
-
+            prob = log(getFallbackProb());
+        } else 
+            prob = log(getProb(id,0));
+        return prob;
     }
 
     // sample the parameters
@@ -259,8 +259,6 @@ public:
     void setStrengthBeta(Prob v) { spBeta_ = v; }
 
     const PyTable<T> & getLastTable() const { return lastTable_; }
-    void setRecursive(bool isRecursive) { isRecursive_ = isRecursive; }
-    bool isRecursive() { return isRecursive_; }
     bool isRemovedTable() { return removedTable_; }
 
 };

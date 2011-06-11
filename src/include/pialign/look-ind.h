@@ -76,8 +76,8 @@ public:
         //     std::cerr << " " << backward[i];
         // std::cerr << std::endl;
     }
-
-    void preCalculate(const WordString & e, const WordString & f, const SpanProbMap & baseChart, const SpanProbMap & genChart) {
+    
+    void preCalculate(const WordString & e, const WordString & f, const SpanProbMap & base, const SpanProbMap & gen, const ParseChart & chart) {    
         // clear the buffers
         unsigned eSize = (e.length()+1);
         if(eFor_.size() <= eSize) { eBuff_.resize(eSize*eSize); eFor_.resize(eSize); eBack_.resize(eSize); }
@@ -86,15 +86,17 @@ public:
         if(fFor_.size() <= fSize) { fBuff_.resize(fSize*fSize); fFor_.resize(fSize); fBack_.resize(fSize); }
         std::fill( fBuff_.begin(), fBuff_.begin()+(fSize*fSize), NEG_INFINITY );
         // make the buffers
-        for(SpanProbMap::const_iterator it = baseChart.begin(); it != baseChart.end(); it++) {
+        for(SpanProbMap::const_iterator it = base.begin(); it != base.end(); it++) {
             // std::cerr << "adding base "<<it->first<<", "<<it->second<<std::endl;
-            updateSpan(it->first.es,it->first.ee,e.length(),it->second,eBuff_);
-            updateSpan(it->first.fs,it->first.fe,f.length(),it->second,fBuff_);
+            Prob prob = chart.getFromChart(it->first);
+            updateSpan(it->first.es,it->first.ee,e.length(),prob,eBuff_);
+            updateSpan(it->first.fs,it->first.fe,f.length(),prob,fBuff_);
         }
-        for(SpanProbMap::const_iterator it = genChart.begin(); it != genChart.end(); it++) {
-            // std::cerr << "adding gen "<<it->first<<", "<<it->second<<std::endl;
-            updateSpan(it->first.es,it->first.ee,e.length(),it->second,eBuff_);
-            updateSpan(it->first.fs,it->first.fe,f.length(),it->second,fBuff_);
+        for(SpanProbMap::const_iterator it = gen.begin(); it != gen.end(); it++) {
+            // std::cerr << "adding base "<<it->first<<", "<<it->second<<std::endl;
+            Prob prob = chart.getFromChart(it->first);
+            updateSpan(it->first.es,it->first.ee,e.length(),prob,eBuff_);
+            updateSpan(it->first.fs,it->first.fe,f.length(),prob,fBuff_);
         }
         // count the probabilities
         addForProbs(eBuff_,eFor_,e.length());
