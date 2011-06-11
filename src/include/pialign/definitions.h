@@ -2,7 +2,7 @@
 #define DEFINITIONS_H__
 
 // define this to perform checks and print debugging info
-#define DEBUG_ON
+// #define DEBUG_ON
 // define this to perform viterbi pushing of forward probabilities
 //  this is much faster, but may reduce accuracy
 // #define VITERBI_ON
