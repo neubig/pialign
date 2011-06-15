@@ -161,9 +161,9 @@ public:
         TSetIter it = set.begin();
         if(mySize > 1) {
             Prob left = rand()*(set.total-mySize*disc_)/RAND_MAX;
-            while((left -= it->count-disc_) > 0) {
+            while(it != set.end() && (left -= it->count-disc_) > 0)
                 it++;
-            }
+            if(it == set.end()) it--;
         }
         it->count++;
         set.total++;
@@ -228,6 +228,7 @@ public:
 
     // sample the parameters
     void sampleParameters() {
+        // std::cerr << "sampling parameters" << std::endl;
         Prob x = total_ > 1 ? betaSample(stren_+1,total_-1) : 1;
         Prob y = 0, z = 0;
         for(int i = 1; i < tables_; i++)
@@ -245,6 +246,7 @@ public:
         disc_ = betaSample(dpAlpha_+(tables_-1)-y,dpBeta_+z);
         // std::cerr << "stren_ = gammaSample("<<spAlpha_<<"+"<<y<<","<<spBeta_<<"-log("<<x<<"))"<<std::endl;
         stren_ = gammaSample(spAlpha_+y,spBeta_-log(x));
+        // std::cerr << "Done!" << std::endl;
     }
 
     Prob getStrength() const { return stren_; }

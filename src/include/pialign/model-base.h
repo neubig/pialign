@@ -80,6 +80,7 @@ public:
     }
 
     virtual void sampleParameters(Prob defStren, Prob defDisc) {
+        // std::cerr << "sampleParameters("<<defStren<<", "<<defDisc<<")"<<std::endl;
         phrases_.sampleParameters();
         if(defStren >= 0) phrases_.setStrength(defStren);
         if(defDisc >= 0) phrases_.setDiscount(defDisc);

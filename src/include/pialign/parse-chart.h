@@ -8,6 +8,7 @@ class ParseChart;
 #include <vector>
 #include "pialign/definitions.h"
 #include "pialign/look-base.h"
+#include "gng/samp-gen.h"
 
 namespace pialign {
 

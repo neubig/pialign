@@ -5,22 +5,42 @@
 #include <cstdlib>
 #include <vector>
 
-inline int discreteSample(const std::vector<double> & vec, double sum = -1) {
+inline int discreteSample(const double* vec, int size, double sum = -1) {
     if(sum < 0) {
         sum = 0;
-        for(unsigned i = 0; i < vec.size(); i++)
+        for(int i = 0; i < size; i++)
             sum += vec[i];
     }
     sum *= (double)rand()/RAND_MAX;
-    for(unsigned i = 0; i < vec.size(); i++) {
+    for(int i = 0; i < size; i++) {
         if((sum -= vec[i]) < 0)
             return i;
     }
     throw std::runtime_error("Couldn't find value after sampling");
 }
 
+inline int discreteSample(const std::vector<double> & vec, double sum = -1) {
+    return discreteSample(&vec[0],vec.size(),sum);
+}
+
 inline int discreteUniformSample(int size) {
     return rand() % size;
+}
+
+inline double addLogProbs(const std::vector<double> & probs) {
+    const unsigned size = probs.size();
+    double myMax = std::max(probs[0],probs[size-1]), norm=0;
+    for(unsigned i = 0; i < probs.size(); i++)
+        norm += exp(probs[i]-myMax);
+    return log(norm)+myMax;
+}
+inline double addLogProbs(double a, double b) {
+    double myMax = std::max(a,b);
+#ifdef VITERBI_ON
+    return myMax;
+#else
+    return log(exp(a-myMax)+exp(b-myMax))+myMax;
+#endif
 }
 
 // distribution sampling functions

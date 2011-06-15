@@ -524,7 +524,7 @@ pair<SpanNode*,Prob> PIAlign::sampleTree(int sent, const Span & mySpan, const Pa
             PRINT_DEBUG(" sampleTree("<<mySpan<<") == (NONE): s="<<actNode->span<<", i="<<actNode->phraseid<<", t="<<actNode->type<<", p="<<actNode->prob<<", b="<<actNode->baseProb<<", a="<<actNode->add<<endl);
             return pair<SpanNode*,Prob>(0,NEG_INFINITY);
         }
-        ans = sampleProbs(normProbs);
+        ans = discreteSample(normProbs,1.0);
     }
     Prob ansProb = log(normProbs[ans]);
 
@@ -550,7 +550,7 @@ pair<SpanNode*,Prob> PIAlign::sampleTree(int sent, const Span & mySpan, const Pa
             return pair<SpanNode*,Prob>(myNode,ansProb);
         // continue sampling
         add = false;
-        ans = sampleLogProbs(&probs[2],probs.size()-2,annealLevel_)+2;
+        ans = discreteSample(&normProbs[2],normProbs.size()-2)+2;
     }
 
     const pair<Span,Span> & myPair = pairs[ans-2];

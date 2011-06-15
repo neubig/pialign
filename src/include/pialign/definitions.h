@@ -2,7 +2,7 @@
 #define DEFINITIONS_H__
 
 // define this to perform checks and print debugging info
-// #define DEBUG_ON
+#define DEBUG_ON
 // define this to perform viterbi pushing of forward probabilities
 //  this is much faster, but may reduce accuracy
 // #define VITERBI_ON
@@ -225,19 +225,6 @@ public:
     }
 };
 
-
-// sample a single set of probabilities
-inline int sampleProbs(std::vector<Prob> vec) {
-    if(vec.size() == 0)
-        throw std::runtime_error("Zero-size vector for sampling");
-    if(vec.size() == 1)
-        return 0;
-    int ret = 0;
-    Prob left = ((Prob)rand())/RAND_MAX;
-    while((left -= vec[ret]) > 0) ret++;
-    return std::min(ret,(int)vec.size()-1);
-}
-
 // sample a single set of log probabilities
 //  return the sampled ID and the log probability of the sample
 inline void normalizeLogProbs(std::vector<Prob> & vec, double anneal = 1) {
@@ -253,48 +240,6 @@ inline void normalizeLogProbs(std::vector<Prob> & vec, double anneal = 1) {
     }
     for(unsigned i = 0; i < size; i++)
         vec[i] /= norm;
-}
-
-// sample a single set of log probabilities
-//  return the sampled ID and the log probability of the sample
-inline int sampleLogProbs(Prob* vec, unsigned size, double anneal = 1) {
-    // approximate the actual max with the front and back
-    Prob myMax = NEG_INFINITY, norm = 0, left;
-    for(unsigned i = 0; i < size; i++) {
-        vec[i] *= anneal;
-        myMax = std::max(myMax,vec[i]);
-    }
-    for(unsigned i = 0; i < size; i++) {
-        vec[i] = exp(vec[i]-myMax);
-        norm += vec[i];
-    }
-    int ret = 0;
-    left = (norm*rand())/RAND_MAX;
-    while((left -= vec[ret]) > 0) {
-        // std::cerr << "  sampleLogProbs ("<<norm<<","<<myMax<<"): r="<<ret<<", b="<<left+vec[ret]<<", a="<<left<<std::endl;
-        ret++;
-    }
-    // std::cerr << "  sampleLogProbs ("<<norm<<","<<myMax<<"): r="<<ret<<", b="<<left+vec[ret]<<", a="<<left<<std::endl;
-    return std::min(ret,(int)size-1);
-}
-inline int sampleLogProbs(std::vector<Prob> vec, double anneal = 1) {
-    return sampleLogProbs(&vec[0],vec.size(),anneal);
-}
-
-inline Prob addLogProbs(const std::vector<Prob> & probs) {
-    const unsigned size = probs.size();
-    Prob myMax = std::max(probs[0],probs[size-1]), norm=0;
-    for(unsigned i = 0; i < probs.size(); i++)
-        norm += exp(probs[i]-myMax);
-    return log(norm)+myMax;
-}
-inline Prob addLogProbs(Prob a, Prob b) {
-    Prob myMax = std::max(a,b);
-#ifdef VITERBI_ON
-    return myMax;
-#else
-    return log(exp(a-myMax)+exp(b-myMax))+myMax;
-#endif
 }
 
 class Corpus {
