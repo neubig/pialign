@@ -22,6 +22,7 @@ Prob HierModel::addSentence(const WordString & e, const WordString & f, SpanNode
             baseProbs.resize(node->phraseid+1, NEG_INFINITY);
         baseProbs[node->phraseid] = node->baseProb;
         totProb += node->baseProb;
+        PRINT_DEBUG(" ModelHier::+=baseProb: "<<node->baseProb<<std::endl);
         toAdd = TYPE_TERM;
     }
     // find the left and right nodes
@@ -30,9 +31,11 @@ Prob HierModel::addSentence(const WordString & e, const WordString & f, SpanNode
     // add the appropriate values for the derivation
     if(node->type == TYPE_GEN) {
         totProb = log(phrases_.getProb(node->phraseid,0));
+        PRINT_DEBUG(" ModelHier::+=genProb: "<<totProb<<std::endl);
         phrases_.addExisting(node->phraseid);
     } else {
         totProb += log(phrases_.getFallbackProb());
+        PRINT_DEBUG(" ModelHier::+=genFallback: "<<log(phrases_.getFallbackProb())<<std::endl);
         totProb += addType(toAdd);
         phrases_.addNew(node->phraseid,lId,rId,toAdd);
     }

@@ -19,12 +19,12 @@ public:
     }
     
     Prob calcBaseProb(const Span & mySpan, Prob baseMeas) const {
-        PRINT_DEBUG(std::cerr << "HierModel::calcBaseProb("<<phraseFallback_<<"+"<<typeProbs_[TYPE_TERM]<<"+"<<baseMeas<<")"<<std::endl);
+        PRINT_DEBUG(" HierModel::calcBaseProb @ "<<mySpan<<": "<<phraseFallback_<<"+"<<typeProbs_[TYPE_TERM]<<"+"<<baseMeas<<" == "<<phraseFallback_+typeProbs_[TYPE_TERM]+baseMeas<<std::endl);
         return phraseFallback_+typeProbs_[TYPE_TERM]+baseMeas;
     }
     
     Prob calcTreeProb(const Span & mySpan, Prob myProb, const Span & yourSpan, Prob yourProb, int type) const {
-        PRINT_DEBUG(" HierModel::calcTreeProb @ "<<mySpan<<"/"<<yourSpan<<" == ("<<phraseFallback_<<","<<typeProbs_[type]<<","<<myProb<<","<<yourProb<<")"<<std::endl);
+        PRINT_DEBUG(" HierModel::calcTreeProb @ "<<mySpan<<"/"<<yourSpan<<" == ("<<phraseFallback_<<","<<typeProbs_[type]<<","<<myProb<<","<<yourProb<<") == "<< phraseFallback_+typeProbs_[type]+myProb+yourProb <<std::endl);
         return phraseFallback_+typeProbs_[type]+myProb+yourProb;
     }
 

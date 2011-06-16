@@ -119,9 +119,9 @@ void BasePhraseCooc::trainCooc(Corpus & es, const WordSymbolSet & eVocab, Corpus
     }
 }
 
-void BasePhraseCooc::addBases(const WordString & e, const WordString & f, const ProbModel & mod, ParseChart & chart, SpanProbMap & baseChart) const {
+SpanProbMap BasePhraseCooc::getBaseChart(const WordString & e, const WordString & f) const {
 
-    BaseUnigram::addBases(e,f,mod,chart,baseChart);
+    SpanProbMap baseChart = BaseUnigram::getBaseChart(e,f);
  
     // add the span probabilities
     vector< LabeledEdge > eEdges = eSymbols_.findEdges(e,e.length());
@@ -137,10 +137,10 @@ void BasePhraseCooc::addBases(const WordString & e, const WordString & f, const 
                 Span s(ee.s, ee.e, fe.s, fe.e);
                 // get the old base probability and add the new probability
                 SpanProbMap::const_iterator bit = baseChart.find(s);
-                Prob myProb = (bit == baseChart.end() ? it->second : addLogProbs(it->second,bit->second));
-                baseChart.insertProb(s, myProb);
-                chart.addToChart(s, mod.calcBaseProb(s,it->second));
+                Prob noSym = (bit == baseChart.end() ? it->second : addLogProbs(it->second,bit->second));
+                baseChart.insert(pair<Span,Prob>(s, noSym));
             }
         }
     }
+    return baseChart;
 }

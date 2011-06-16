@@ -526,7 +526,7 @@ pair<SpanNode*,Prob> PIAlign::sampleTree(int sent, const Span & mySpan, const Pa
         }
         ans = discreteSample(normProbs,1.0);
     }
-    Prob ansProb = log(normProbs[ans]);
+    Prob ansProb = (add?log(normProbs[ans]):0);
 
     PRINT_DEBUG(" sampleTree("<<mySpan<<") == ("<<ans<<" --> "<<ansProb<<")");
     if(actNode) PRINT_DEBUG(": s="<<actNode->span<<", i="<<actNode->phraseid<<", t="<<actNode->type<<", p="<<actNode->prob<<", b="<<actNode->baseProb<<", a="<<actNode->add);
@@ -589,13 +589,14 @@ SpanNode * PIAlign::buildSample(int sent, ParseChart & chart, LookAhead * lookAh
     gettimeofday(&tStart, NULL);
     chart.initialize(e.length(),f.length());
     SpanProbMap genChart = SpanProbMap();  // map of generative probs
-    SpanProbMap baseChart = SpanProbMap(); // map of base probs
 
     PRINT_DEBUG(endl << "---- SAMPLING SENTENCE "<<sent<<" ----"<<endl);
 
     gettimeofday(&tInit, NULL);
     // add the base probabilities
-    base_->addBases(e, f, *model_, chart, baseChart);
+    SpanProbMap baseChart = base_->getBaseChart(e,f);
+    for(SpanProbMap::const_iterator it = baseChart.begin(); it != baseChart.end(); it++)
+        chart.addToChart(it->first,model_->calcBaseProb(it->first,it->second));
     gettimeofday(&tBase, NULL);
 
     // add the generative probabilities
@@ -906,6 +907,7 @@ void PIAlign::train() {
                 jd.likelihood += tOld;
             }
             
+            // cerr << "At rejection tn="<<tNew<<", to="<<tOld<<", pn="<<jd.newProp<<" ("<<jd.newProp+jd.chartProb<<"), po="<<jd.oldProp<<" ("<<jd.oldProp+jd.chartProb<<") == "<<accept<<": "<<(isAccepted?"accept":"REJECT")<<endl;
             PRINT_DEBUG("At rejection tn="<<tNew<<", to="<<tOld<<", pn="<<jd.newProp<<" ("<<jd.newProp+jd.chartProb<<"), po="<<jd.oldProp<<" ("<<jd.oldProp+jd.chartProb<<") == "<<accept<<": "<<(isAccepted?"accept":"REJECT")<<endl);
             if(sents / 100 != lastSent) {
                 cerr << "\r" << sents;

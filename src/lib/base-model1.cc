@@ -26,10 +26,12 @@ void BaseModelOne::combineBases(const WordString & e, const WordString & f, std:
         probs[i] = probs[i] ? log(probs[i]) : NEG_INFINITY;
 }
 
-void BaseModelOne::addBases(const WordString & e, const WordString & f, const ProbModel & mod, ParseChart & chart, SpanProbMap & baseChart) const {
+SpanProbMap BaseModelOne::getBaseChart(const WordString & e, const WordString & f) const {
+    SpanProbMap baseChart;
+
     int T = e.length(), V = f.length();
     Prob l2 = log(2);
-    Prob eProb, fProb, noSym, yesSym, fm1;
+    Prob eProb, fProb, noSym, fm1;
     std::vector<Prob> em1s((V+1)*(maxLen_+1));
     std::vector<Prob> eComb, fComb;
     combineBases(e,f,eComb); combineBases(f,e,fComb);
@@ -56,14 +58,13 @@ void BaseModelOne::addBases(const WordString & e, const WordString & f, const Pr
                         noSym = (em1+fProb+fm1+eProb)/2+poisProbs_[t-s]+poisProbs_[v-u];
                     else 
                         noSym = addLogProbs(em1+fProb,fm1+eProb)-l2+poisProbs_[t-s]+poisProbs_[v-u];
-                    yesSym = mod.calcBaseProb(mySpan,noSym);
                     // PRINT_DEBUG("calcBaseProb @ "<<mySpan<<", addLogProbs("<<em1<<"+"<<fProb<<","<<fm1<<"+"<<eProb<<")+"<<poisProbs_[t-s]<<"+"<<poisProbs_[v-u]<<") == "<<noSym<<" --> "<<yesSym<<std::endl);
-                    chart.addToChart(mySpan,yesSym);    // add to the overall chart
                     baseChart.insertProb(mySpan,noSym); // add to the base chart
                 }
             }
         }
     }
+    return baseChart;
 }
 
 void BaseModelOne::loadModelOne(const char* e2fFile, WordSymbolSet & eVocab, WordSymbolSet & fVocab, bool forward) {

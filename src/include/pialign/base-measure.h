@@ -43,7 +43,7 @@ public:
     // add base probabilities for the unigram model
     //  e,f strings, logPenalty is the additional log probability added
     //  by fallbacks, etc in the model, chart is the overall chart
-    virtual void addBases(const WordString & e, const WordString & f, const ProbModel & mod, ParseChart & chart, SpanProbMap & baseChart) const = 0;
+    virtual SpanProbMap getBaseChart(const WordString & e, const WordString & f) const = 0;
 
     void trainPoisson(Prob avgLen, Prob nullProb) {
 

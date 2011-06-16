@@ -16,7 +16,7 @@ public:
 
     BaseUnigram() : BaseMeasure(), uniPen_(0) { }
 
-    virtual void addBases(const WordString & e, const WordString & f, const ProbModel & mod, ParseChart & chart, SpanProbMap & baseChart) const;
+    virtual SpanProbMap getBaseChart(const WordString & e, const WordString & f) const;
 
 };
 
