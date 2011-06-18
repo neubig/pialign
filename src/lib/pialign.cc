@@ -362,7 +362,7 @@ void PIAlign::addForwardProbs(int eLen, int fLen, ParseChart & chart, const Span
         int i, spanSize = spans.size();
         for(i = 0; i < spanSize; i++) {
             const Span & mySpan = spans[i].second;
-            myProb = chart.getFromChart(mySpan);
+            myProb = chart.getFromChart(mySpan); spans[i].first = myProb;
             s = mySpan.es; t = mySpan.ee; u = mySpan.fs; v = mySpan.fe;
             // e is forward
             for(S = max(s-l,0); S <= s; S++) {
@@ -911,6 +911,7 @@ void PIAlign::train() {
             }
             
             PRINT_DEBUG("At rejection tn="<<tNew<<", to="<<tOld<<", pn="<<jd.newProp<<" ("<<jd.newProp+jd.chartProb<<"), po="<<jd.oldProp<<" ("<<jd.oldProp+jd.chartProb<<") == "<<accept<<": "<<(isAccepted?"accept":"REJECT")<<endl);
+
             if(sents / 100 != lastSent) {
                 cerr << "\r" << sents;
                 lastSent = sents/100;

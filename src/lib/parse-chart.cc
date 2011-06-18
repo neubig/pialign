@@ -22,17 +22,21 @@ ProbSpanVec ParseChart::getTrimmedAgenda(int l, Prob probWidth, const SpanSet & 
     ret.reserve(agenda.size());
     Prob maxProb = NEG_INFINITY;
     for(SpanVec::const_iterator it = agenda.begin(); it != agenda.end(); it++) {
-        // cerr << "Span: " << *it << " getFromChart("<<*it<<") + look.getLookAhead("<<*it<<") == "<<getFromChart(*it)<<" + "<<look.getLookAhead(*it)<<endl;
         Prob prob = getFromChart(*it)+look.getLookAhead(*it);
         maxProb = max(prob,maxProb);
+        PRINT_DEBUG("Span: " << *it << " getFromChart("<<*it<<") + look.getLookAhead("<<*it<<") == "<<getFromChart(*it)<<" + "<<look.getLookAhead(*it)<<" == "<<prob<< " (max="<<maxProb<<")"<<endl);
         ret.push_back(ProbSpan(prob,*it));
     }
     // trim the beam if necessary
     unsigned next = 0;
+    PRINT_DEBUG("Max is "<<maxProb<<", saving:");
     for(unsigned i = 0; i < ret.size(); i++) {
-        if(ret[i].first>maxProb+probWidth || preserve.find(ret[i].second) != preserve.end())
+        if(ret[i].first>maxProb+probWidth || preserve.find(ret[i].second) != preserve.end()) {
             ret[next++] = ret[i];
+            PRINT_DEBUG(" "<<ret[i].second);
+        }
     }
+    PRINT_DEBUG(endl);
     ret.resize(next);
     return ret;
 }

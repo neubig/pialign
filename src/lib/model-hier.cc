@@ -20,7 +20,6 @@ Prob HierModel::addSentence(const WordString & e, const WordString & f, SpanNode
     } else if(toAdd != TYPE_GEN) {
         if((int)baseProbs.size() <= node->phraseid) 
             baseProbs.resize(node->phraseid+1, NEG_INFINITY);
-        PRINT_DEBUG("baseProbs["<<node->phraseid<<"] = "<<node->baseProb<<" @ "<<mySpan<<endl);
         baseProbs[node->phraseid] = node->baseProb;
         toAdd = TYPE_TERM;
     }

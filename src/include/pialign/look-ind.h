@@ -23,9 +23,9 @@ public:
     void setAdd(bool add) { add_ = add; }
 
     Prob getLookAhead(const Span & s) const {
-       // std::cerr << "min(eFor_[" << s.es << "]+eBack_["<<s.ee<<"], fFor_[" << s.fs << "]+fBack_["<<s.fe<<"]) == "<<
-       //     " min("<<eFor_[s.es]<<"+"<<eBack_[s.ee]<<","<<fFor_[s.fs]<<"+"<<fBack_[s.fe]<<") == "<<
-       //     std::min(eFor_[s.es]+eBack_[s.ee],fFor_[s.fs]+fBack_[s.fe]) << std::endl;
+       PRINT_DEBUG("min(eFor_[" << s.es << "]+eBack_["<<s.ee<<"], fFor_[" << s.fs << "]+fBack_["<<s.fe<<"]) == "<<
+           " min("<<eFor_[s.es]<<"+"<<eBack_[s.ee]<<","<<fFor_[s.fs]<<"+"<<fBack_[s.fe]<<") == "<<
+           std::min(eFor_[s.es]+eBack_[s.ee],fFor_[s.fs]+fBack_[s.fe]) << std::endl);
         return std::min(eFor_[s.es]+eBack_[s.ee],fFor_[s.fs]+fBack_[s.fe]);
     }
     
@@ -52,10 +52,10 @@ public:
         }
             
         // // --- print ---
-        // std::cerr << "Forward:";
-        // for(int i = 0; i <= len; i++)
-        //     std::cerr << " " << forward[i];
-        // std::cerr << std::endl;
+        PRINT_DEBUG("Forward:");
+        for(int i = 0; i <= len; i++)
+            PRINT_DEBUG(" " << forward[i]);
+        PRINT_DEBUG(std::endl);
     }
     void addBackProbs(const std::vector<Prob> & buff, std::vector<Prob> & backward, int len) {
         std::fill(backward.begin(),backward.end(),NEG_INFINITY);
@@ -71,10 +71,10 @@ public:
         }
 
         // // --- print ---
-        // std::cerr << "Backward:";
-        // for(int i = 0; i <= len; i++)
-        //     std::cerr << " " << backward[i];
-        // std::cerr << std::endl;
+        PRINT_DEBUG("Backward:");
+        for(int i = 0; i <= len; i++)
+            PRINT_DEBUG(" " << backward[i]);
+        PRINT_DEBUG(std::endl);
     }
     
     void preCalculate(const WordString & e, const WordString & f, const SpanProbMap & base, const SpanProbMap & gen, const ParseChart & chart) {    
@@ -87,13 +87,13 @@ public:
         std::fill( fBuff_.begin(), fBuff_.begin()+(fSize*fSize), NEG_INFINITY );
         // make the buffers
         for(SpanProbMap::const_iterator it = base.begin(); it != base.end(); it++) {
-            // std::cerr << "adding base "<<it->first<<", "<<it->second<<std::endl;
+            PRINT_DEBUG("adding base "<<it->first<<", "<<it->second<<std::endl);
             Prob prob = chart.getFromChart(it->first);
             updateSpan(it->first.es,it->first.ee,e.length(),prob,eBuff_);
             updateSpan(it->first.fs,it->first.fe,f.length(),prob,fBuff_);
         }
         for(SpanProbMap::const_iterator it = gen.begin(); it != gen.end(); it++) {
-            // std::cerr << "adding base "<<it->first<<", "<<it->second<<std::endl;
+            PRINT_DEBUG("adding base "<<it->first<<", "<<it->second<<std::endl);
             Prob prob = chart.getFromChart(it->first);
             updateSpan(it->first.es,it->first.ee,e.length(),prob,eBuff_);
             updateSpan(it->first.fs,it->first.fe,f.length(),prob,fBuff_);
