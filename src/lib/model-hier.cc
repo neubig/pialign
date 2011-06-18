@@ -3,51 +3,58 @@
 using namespace pialign;
 using namespace std;
 
-Prob HierModel::addSentence(const WordString & e, const WordString & f, SpanNode* node, StringWordSet & ePhrases, StringWordSet & fPhrases, PairWordSet & pairs, std::vector<Prob>& baseProbs) {
+Prob HierModel::addSentence(const WordString & e, const WordString & f, SpanNode* node, StringWordSet & ePhrases, StringWordSet & fPhrases, PairWordSet & pairs, vector<Prob>& baseProbs) {
     if(!node || !node->add) return 0;
     // get the phrase IDs
-    Prob totProb = 0;
     const Span & mySpan = node->span;
     int s=mySpan.es,t=mySpan.ee,u=mySpan.fs,v=mySpan.fe;
     WordId eId = ePhrases.getId(e.substr(s,t-s),true),
         fId = fPhrases.getId(f.substr(u,v-u),true);
-    node->phraseid = pairs.getId(std::pair<WordId,WordId>(eId,fId),true);
+    node->phraseid = pairs.getId(pair<WordId,WordId>(eId,fId),true);
     int toAdd = node->type;
     // handle either non-terminals or terminals
+    Prob rightProb, leftProb;
     if(toAdd == TYPE_REG || toAdd == TYPE_INV) {
-        totProb += addSentence(e,f,node->right,ePhrases,fPhrases,pairs,baseProbs);
-        totProb += addSentence(e,f,node->left,ePhrases,fPhrases,pairs,baseProbs);
+        rightProb = addSentence(e,f,node->right,ePhrases,fPhrases,pairs,baseProbs);
+        leftProb = addSentence(e,f,node->left,ePhrases,fPhrases,pairs,baseProbs);
     } else if(toAdd != TYPE_GEN) {
         if((int)baseProbs.size() <= node->phraseid) 
             baseProbs.resize(node->phraseid+1, NEG_INFINITY);
+        PRINT_DEBUG("baseProbs["<<node->phraseid<<"] = "<<node->baseProb<<" @ "<<mySpan<<endl);
         baseProbs[node->phraseid] = node->baseProb;
-        totProb += node->baseProb;
-        PRINT_DEBUG(" ModelHier::+=baseProb: "<<node->baseProb<<std::endl);
         toAdd = TYPE_TERM;
     }
     // find the left and right nodes
     WordId lId = (node->left?node->left->phraseid:-1),
             rId = (node->right?node->right->phraseid:-1);
     // add the appropriate values for the derivation
+    Prob totProb = 0;
     if(node->type == TYPE_GEN) {
         totProb = log(phrases_.getProb(node->phraseid,0));
-        PRINT_DEBUG(" ModelHier::+=genProb: "<<totProb<<std::endl);
+        PRINT_DEBUG(" ModelHier::=genProb: "<<totProb<<" @ "<<mySpan<<endl);
         phrases_.addExisting(node->phraseid);
     } else {
-        totProb += log(phrases_.getFallbackProb());
-        PRINT_DEBUG(" ModelHier::+=genFallback: "<<log(phrases_.getFallbackProb())<<std::endl);
-        totProb += addType(toAdd);
+        if(node->type == TYPE_BASE) {
+            totProb = log(phrases_.getFallbackProb())+addType(toAdd)+node->baseProb;
+            PRINT_DEBUG(" ModelHier::=baseProb: "<<totProb<<" @ "<<mySpan<<endl);
+        }
+        else {
+            Prob typeProb = addType(toAdd);
+            totProb = log(phrases_.getFallbackProb())+typeProb+leftProb+rightProb;
+            PRINT_DEBUG(" ModelHier::=treeProb: "<<log(phrases_.getFallbackProb())<<"+"<<typeProb<<"+"<<leftProb<<"+"<<rightProb<<" == "<<totProb<<" @ "<<mySpan<<endl);
+        }
         phrases_.addNew(node->phraseid,lId,rId,toAdd);
     }
     addAverageDerivation(node->phraseid,phrases_.getTotal(node->phraseid),node->prob);
     return totProb;
 }
 
-SpanNode* HierModel::removePhrasePair(WordId jId, std::vector<Prob>& baseProbs) {
+SpanNode* HierModel::removePhrasePair(WordId jId, vector<Prob>& baseProbs) {
     if(jId < 0) return 0;
     SpanNode* ret = new SpanNode(Span(0,0,0,0));
     ret->phraseid = jId;
     ret->prob = phrases_.remove(jId);
+    PRINT_DEBUG("ret->prob("<<jId<<") = "<<ret->prob<<endl);
     // this was generated from the fallback
     if(phrases_.isRemovedTable()) {
         PyTable<WordId> table = phrases_.getLastTable();
@@ -64,6 +71,7 @@ SpanNode* HierModel::removePhrasePair(WordId jId, std::vector<Prob>& baseProbs) 
         else {
             ret->prob += baseProbs[jId];
             ret->baseProb = baseProbs[jId];
+            PRINT_DEBUG("ret->baseProb == baseProbs["<<jId<<"] == "<<baseProbs[jId]<<endl);
             ret->type = TYPE_BASE;
         }
     }

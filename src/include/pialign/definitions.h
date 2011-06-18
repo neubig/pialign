@@ -23,11 +23,13 @@
 #include <algorithm>
 #include <iostream>
 
+
 #define PRINT_DEBUG(msg)
-/* #define PRINT_DEBUG(msg) do {                   \
+
+#define PRINT_LOG(msg) do {                   \
      std::cerr << msg;                           \
      }                                           \
-   while (0);*/
+   while (0);
 
 #define THROW_ERROR(msg) do {                   \
     std::ostringstream oss;                     \

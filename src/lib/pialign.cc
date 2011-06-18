@@ -477,12 +477,13 @@ pair<SpanNode*,Prob> PIAlign::sampleTree(int sent, const Span & mySpan, const Pa
     //  note that baseChart does not include the symbol probabilities, so we need to add them
     probs.push_back(model_->calcBaseProb(mySpan,baseChart.getProb(mySpan)));
     
-    PRINT_DEBUG("genChart.getProb"<<mySpan<<" == "<<genChart.getProb(mySpan)<<endl);
-    PRINT_DEBUG("baseChart.getProb"<<mySpan<<" == "<<baseChart.getProb(mySpan)<<" --> "<<model_->calcBaseProb(mySpan,baseChart.getProb(mySpan))<<endl);
-
     int ans = -1;
     bool actChild = (actNode && actNode->left);
     Span actLeft = actChild ? actNode->left->span : Span(0,0,0,0);
+
+    PRINT_DEBUG("sampleTree"<<mySpan << " (left="<<actLeft<<")"<<endl);
+    PRINT_DEBUG(" genChart.getProb[0] == "<<genChart.getProb(mySpan)<<endl);
+    PRINT_DEBUG(" baseChart.getProb[1] == "<<baseChart.getProb(mySpan)<<" --> "<<model_->calcBaseProb(mySpan,baseChart.getProb(mySpan))<<endl);
 
     // remainder are pair probabilities
     Prob tProb;
@@ -491,8 +492,9 @@ pair<SpanNode*,Prob> PIAlign::sampleTree(int sent, const Span & mySpan, const Pa
             Span qls(s,S,u,U), qrs(S,t,U,v), rls(s,S,U,v), rrs(S,t,u,U);
             if(qls.length() && qrs.length()) {
                 tProb = model_->calcTreeProb(qls,qrs,chart,TYPE_REG);
+                PRINT_DEBUG(" calcTreeProb["<<probs.size()<<"]("<<qls<<","<<qrs<<","<<TYPE_REG<<") == "<<tProb<<endl);
                 if(tProb > NEG_INFINITY) {
-                    if(actChild && actLeft == qls)
+                    if(actChild && actNode->type == TYPE_REG && actLeft == qls)
                         ans = probs.size();
                     probs.push_back(tProb);
                     pairs.push_back(pair<Span,Span>(qls,qrs));
@@ -500,8 +502,9 @@ pair<SpanNode*,Prob> PIAlign::sampleTree(int sent, const Span & mySpan, const Pa
             }
             if(rls.length() && rrs.length() && !monotonic_) {
                 tProb = model_->calcTreeProb(rls,rrs,chart,TYPE_INV);
+                PRINT_DEBUG(" calcTreeProb["<<probs.size()<<"]("<<rls<<","<<rrs<<","<<TYPE_INV<<") == "<<tProb<<endl);
                 if(tProb > NEG_INFINITY) { 
-                    if(actChild && actLeft == rls)
+                    if(actChild && actNode->type == TYPE_INV && actLeft == rls)
                         ans = probs.size();
                     probs.push_back(tProb);
                     pairs.push_back(pair<Span,Span>(rls,rrs));
@@ -530,7 +533,7 @@ pair<SpanNode*,Prob> PIAlign::sampleTree(int sent, const Span & mySpan, const Pa
 
     PRINT_DEBUG(" sampleTree("<<mySpan<<") == ("<<ans<<" --> "<<ansProb<<")");
     if(actNode) PRINT_DEBUG(": s="<<actNode->span<<", i="<<actNode->phraseid<<", t="<<actNode->type<<", p="<<actNode->prob<<", b="<<actNode->baseProb<<", a="<<actNode->add);
-    PRINT_DEBUG(endl);
+    PRINT_DEBUG(", prob="<<probs[ans]<<endl);
      
     // make the span node
     SpanNode * myNode = new SpanNode(mySpan);
@@ -907,7 +910,6 @@ void PIAlign::train() {
                 jd.likelihood += tOld;
             }
             
-            // cerr << "At rejection tn="<<tNew<<", to="<<tOld<<", pn="<<jd.newProp<<" ("<<jd.newProp+jd.chartProb<<"), po="<<jd.oldProp<<" ("<<jd.oldProp+jd.chartProb<<") == "<<accept<<": "<<(isAccepted?"accept":"REJECT")<<endl;
             PRINT_DEBUG("At rejection tn="<<tNew<<", to="<<tOld<<", pn="<<jd.newProp<<" ("<<jd.newProp+jd.chartProb<<"), po="<<jd.oldProp<<" ("<<jd.oldProp+jd.chartProb<<") == "<<accept<<": "<<(isAccepted?"accept":"REJECT")<<endl);
             if(sents / 100 != lastSent) {
                 cerr << "\r" << sents;
@@ -988,8 +990,10 @@ void PIAlign::trim() {
         if(model_->calcGenProb(it->second,Span(0,eLens[it->first.first],0,fLens[it->first.second])) > NEG_INFINITY) {
             eActive[it->first.first]++; fActive[it->first.second]++;
         }
-        else 
+        else {
             jDead.push_back(it->second);
+            baseProbs_[it->second] = NEG_INFINITY;
+        }
     }
     model_->setRememberNull(remNull);
     for(int i = 0; i < (int)eActive.size(); i++)

@@ -4,26 +4,29 @@ using namespace pialign;
 using namespace std;
 
 void BaseModelOne::combineBases(const WordString & e, const WordString & f, std::vector<Prob> & probs) const {
-    int I = e.length(), J = f.length(), myMax = I*J*(maxLen_+1);
+    int I = e.length(), J = f.length()+1, myMax = I*J*(maxLen_+1);
     if((int)probs.size() < myMax) probs.resize(myMax);
+    fill(probs.begin(),probs.end(),0);
     for(int i = 0; i < I; i++) {
         Prob* base = &probs[i*J*(maxLen_+1)+J];
         int myE = e[i];
         Prob nullProb = getCond(myE,0);
-        for(int j = 0; j < J; j++) {
+        for(int j = 0; j < J-1; j++) {
             // add zero and one values values
             base[j-J] = nullProb;
             base[j] = getCond(myE,f[j]);
             PRINT_DEBUG("combineBases("<<i<<","<<j<<") == "<<base[j]<<std::endl)
         }
+        base[-1] = nullProb;
         for(int l = 1; l < maxLen_; l++)
-            for(int j = 0; j < J-l; j++) {
+            for(int j = 0; j < J-l-1; j++) {
                 PRINT_DEBUG("combineBases("<<i<<","<<j<<","<<l<<") == "<<base[j]<<std::endl);
                 base[j+l*J] = (base[j+(l-1)*J]*l+base[j+l])/(l+1);
             }
     }
-    for(int i = 0; i < myMax; i++)
+    for(int i = 0; i < myMax; i++) {
         probs[i] = probs[i] ? log(probs[i]) : NEG_INFINITY;
+    }
 }
 
 SpanProbMap BaseModelOne::getBaseChart(const WordString & e, const WordString & f) const {
@@ -47,11 +50,11 @@ SpanProbMap BaseModelOne::getBaseChart(const WordString & e, const WordString & 
                 for(int v = (s==t?u+1:u); v <= actV; v++) {
                     if(u != v) {
                         fProb += unigrams_[f[v-1]];
-                        fm1 += fComb[(v-1)*T*(maxLen_+1)+(t-s)*T+s];
+                        fm1 += fComb[(v-1)*(T+1)*(maxLen_+1)+(t-s)*(T+1)+s];
                     }
                     Prob em1 = 0;
                     if(s != t) 
-                        em1 = (em1s[v*(maxLen_+1)+v-u] += eComb[(t-1)*V*(maxLen_+1)+(v-u)*V+u]);
+                        em1 = (em1s[v*(maxLen_+1)+v-u] += eComb[(t-1)*(V+1)*(maxLen_+1)+(v-u)*(V+1)+u]);
                     Span mySpan(s,t,u,v);
                     // add model one probabilities 
                     if(geometric_) 
