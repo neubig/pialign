@@ -13,7 +13,7 @@ Prob HierModel::addSentence(const WordString & e, const WordString & f, SpanNode
     node->phraseid = pairs.getId(pair<WordId,WordId>(eId,fId),true);
     int toAdd = node->type;
     // handle either non-terminals or terminals
-    Prob rightProb, leftProb;
+    Prob rightProb = 0, leftProb = 0;
     if(toAdd == TYPE_REG || toAdd == TYPE_INV) {
         rightProb = addSentence(e,f,node->right,ePhrases,fPhrases,pairs,baseProbs);
         leftProb = addSentence(e,f,node->left,ePhrases,fPhrases,pairs,baseProbs);
