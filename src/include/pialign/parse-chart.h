@@ -26,11 +26,13 @@ protected:
     int eMultiplier_;
     Agendas agendas_; // the current set of bucketed agendas
     int debug_;
+    bool useQueue_;
     int eLen_, fLen_;
+    std::vector< std::vector< std::pair<int,int> > > topLefts_, botLefts_, topRights_, botRights_;
 
 public:
 
-    ParseChart() : std::vector<Prob>(), debug_(0) { }
+    ParseChart() : std::vector<Prob>(), debug_(0), useQueue_(false) { }
 
     // chart access
     inline int findChartPosition(const Span & s) const {
@@ -38,7 +40,21 @@ public:
     }
     inline int findChartPosition(int s, int t, int u, int v) const {
         return (t*(t+1)/2+s)*eMultiplier_+v*(v+1)/2+u;
-    } 
+    }
+
+    void setUseQueue(bool useQueue) { useQueue_ = useQueue; }
+
+    inline std::vector< std::pair<int,int> > & getQueue(std::vector< std::vector< std::pair<int,int> > > & myQueue, int ide, int idf) {
+        PRINT_DEBUG("getQueue("<<ide<<", "<<idf<<") == "<<ide*(fLen_+1)+idf<<std::endl);
+        return myQueue[ide*(fLen_+1)+idf];
+    }
+    inline std::vector< std::pair<int,int> > & getTopLefts(int ide, int idf) { return getQueue(topLefts_,ide,idf); }
+    inline std::vector< std::pair<int,int> > & getBotLefts(int ide, int idf) { return getQueue(botLefts_,ide,idf); }
+    inline std::vector< std::pair<int,int> > & getTopRights(int ide, int idf) { return getQueue(topRights_,ide,idf); }
+    inline std::vector< std::pair<int,int> > & getBotRights(int ide, int idf) { return getQueue(botRights_,ide,idf); }
+    inline void addToQueue(std::vector< std::vector< std::pair<int,int> > >& myQueue, int ide, int idf, int vale, int valf) {
+        getQueue(myQueue,ide,idf).push_back(std::pair<int,int>(vale,valf));
+    }
 
     inline Prob addToChart(int s, int t, int u, int v, Prob p, int idx, int len) {
 #ifdef DEBUG_ON
@@ -49,7 +65,18 @@ public:
 #endif
         Prob ret;
         if((*this)[idx] <= NEG_INFINITY) {
-            agendas_[len-1].push_back(Span(s,t,u,v));
+            Span mySpan(s,t,u,v);
+            agendas_[len-1].push_back(mySpan);
+            if(useQueue_) {
+                PRINT_DEBUG("addToQueue(topLefts_,"<<t<<","<<v<<","<<s<<","<<u<<")"<<std::endl);
+                PRINT_DEBUG("addToQueue(botLefts_,"<<t<<","<<u<<","<<s<<","<<v<<")"<<std::endl);
+                PRINT_DEBUG("addToQueue(topRights_,"<<s<<","<<v<<","<<t<<","<<u<<")"<<std::endl);
+                PRINT_DEBUG("addToQueue(botRights_,"<<s<<","<<u<<","<<t<<","<<v<<")"<<std::endl);
+                addToQueue(topLefts_,t,v,s,u);
+                addToQueue(botLefts_,t,u,s,v);
+                addToQueue(topRights_,s,v,t,u);
+                addToQueue(botRights_,s,u,t,v);
+            }
             ret = p;
         }
         else

@@ -6,7 +6,7 @@ using namespace pialign;
 SpanProbMap BaseUnigram::getBaseChart(const WordString & e, const WordString & f) const {
     SpanProbMap baseChart;
     int T = e.length(), V = f.length();
-    Prob eProb, fProb, noSym, yesSym;
+    Prob eProb, fProb, noSym; //, yesSym;
     for(int s = 0; s <= T; s++) {
         eProb = 0;
         int actT = std::min(s+maxLen_,T);

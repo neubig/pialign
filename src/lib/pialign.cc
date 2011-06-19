@@ -33,7 +33,7 @@ using namespace gng;
 
 void dieOnHelp(const char* err) {
 #ifdef HAVE_CONFIG_H
-    cerr << "---pialign ver. " << PACKAGE_VERSION "---" << endl;
+    cerr << "---pialign ver. " << PACKAGE_VERSION << "---" << endl;
 #else
     cerr << "---pialign---" << endl;
 #endif
@@ -87,6 +87,7 @@ cerr << " A tool for unsupervised Bayesian alignment using phrase-based ITGs" <<
 << "" << endl
 << " -burnin       The number of burn-in iterations (default 9)" << endl
 << " -probwidth    The width of the probability beam to use (default 1e-10)" << endl
+<< " -noqueue      Use exhaustive search instead of queue-based parsing" << endl
 << " -lookahead    The type of lookahead function to use:" << endl
 << "               'none'=no look-ahead, 'ind'=independently calculate both sides" << endl
 << " -samps        The number of samples to take (default 1)" << endl
@@ -114,6 +115,8 @@ void PIAlign::loadConfig(int argc, const char** argv) {
             else if(!strcmp(argv[i],"-burnin"))         burnIn_ = atoi(argv[++i]);
             else if(!strcmp(argv[i],"-samprate"))       sampRate_ = atoi(argv[++i]);
             else if(!strcmp(argv[i],"-probwidth"))      probWidth_ = atof(argv[++i]);
+            else if(!strcmp(argv[i],"-usequeue"))       useQueue_ = true;
+            else if(!strcmp(argv[i],"-noqueue"))        useQueue_ = false;
             else if(!strcmp(argv[i],"-defdisc"))        defDisc_ = atof(argv[++i]);
             else if(!strcmp(argv[i],"-defstren"))       defStren_ = atof(argv[++i]);
             else if(!strcmp(argv[i],"-noshuffle"))      shuffle_ = false;
@@ -262,6 +265,7 @@ void PIAlign::loadCorpora() {
     // initialize the charts
     buildJobs_.resize(numThreads_);
     for(int i = 0; i < numThreads_; i++) {
+        buildJobs_[i].chart.setUseQueue(useQueue_);
         buildJobs_[i].chart.initialize(maxLen,maxLen);
         buildJobs_[i].pialign = this;
         // -------------------- make the look-ahead -----------------------
@@ -353,7 +357,7 @@ void PIAlign::addForwardProbs(int eLen, int fLen, ParseChart & chart, const Span
 
     Span yourSpan;
     Prob myProb, yourProb;
-    int L = eLen+fLen,yourMax,s,t,u,v,S,U;
+    int L = eLen+fLen,s,t,u,v,yourMax,S,U;
     if((int)jd.beamWidths.size() < L) jd.beamWidths.resize(L);
     // loop through all the agendas
     for(int l = 1; l < L; l++) {
@@ -364,58 +368,98 @@ void PIAlign::addForwardProbs(int eLen, int fLen, ParseChart & chart, const Span
             const Span & mySpan = spans[i].second;
             myProb = chart.getFromChart(mySpan); spans[i].first = myProb;
             s = mySpan.es; t = mySpan.ee; u = mySpan.fs; v = mySpan.fe;
-            // e is forward
-            for(S = max(s-l,0); S <= s; S++) {
-                // f is forward
-                yourMax = (S==s?u-1:u);
-                for(U = max(u-l+s-S,0); U <= yourMax; U++) {
-                    yourSpan = Span(S,s,U,u);
+            // use a queue-based approach
+            if(useQueue_) {
+                // e and f are both previous
+                const vector< pair<int,int> > & topLeft = chart.getTopLefts(s,u);
+                for(vector< pair<int,int> >::const_iterator it = topLeft.begin(); it != topLeft.end(); it++) {
+                    if(s-it->first+u-it->second > l) continue;
+                    yourSpan = Span(it->first,s,it->second,u);
                     yourProb = chart.getFromChart(yourSpan);
                     if(yourProb > NEG_INFINITY) 
-                        chart.addToChart(S,t,U,v,model_->calcTreeProb(mySpan,myProb,yourSpan,yourProb,TYPE_REG));
+                        chart.addToChart(it->first,t,it->second,v,model_->calcTreeProb(mySpan,myProb,yourSpan,yourProb,TYPE_REG));
                 }
+                // e is previous, f is next
+                const vector< pair<int,int> > & botLeft = chart.getBotLefts(s,v);
+                for(vector< pair<int,int> >::const_iterator it = botLeft.begin(); it != botLeft.end(); it++) {
+                    if(s-it->first+it->second-v > l) continue;
+                    yourSpan = Span(it->first,s,v,it->second);
+                    yourProb = chart.getFromChart(yourSpan);
+                    if(yourProb > NEG_INFINITY) 
+                        chart.addToChart(it->first,t,u,it->second,model_->calcTreeProb(mySpan,myProb,yourSpan,yourProb,TYPE_INV));
+                }
+                // e is next, f is previous
+                const vector< pair<int,int> > & topRight = chart.getTopRights(t,u);
+                for(vector< pair<int,int> >::const_iterator it = topRight.begin(); it != topRight.end(); it++) {
+                    if(it->first-t+u-it->second > l) continue;
+                    yourSpan = Span(t,it->first,it->second,u);
+                    yourProb = chart.getFromChart(yourSpan);
+                    if(yourProb > NEG_INFINITY) 
+                        chart.addToChart(s,it->first,it->second,v,model_->calcTreeProb(mySpan,myProb,yourSpan,yourProb,TYPE_INV));
+                }
+                // e and f are next
+                const vector< pair<int,int> > & botRight = chart.getBotRights(t,v);
+                for(vector< pair<int,int> >::const_iterator it = botRight.begin(); it != botRight.end(); it++) {
+                    if(it->second-v+it->first-t > l) continue;
+                    yourSpan = Span(t,it->first,v,it->second);
+                    yourProb = chart.getFromChart(yourSpan);
+                    if(yourProb > NEG_INFINITY) 
+                        chart.addToChart(s,it->first,u,it->second,model_->calcTreeProb(mySpan,myProb,yourSpan,yourProb,TYPE_REG));
+                }
+            }
+            // exhaustively expand all the possibilities
+            else {
+
+                for(S = max(s-l,0); S <= s; S++) {
+                    // f is forward
+                    yourMax = (S==s?u-1:u);
+                    for(U = max(u-l+s-S,0); U <= yourMax; U++) {
+                        yourSpan = Span(S,s,U,u);
+                        yourProb = chart.getFromChart(yourSpan);
+                        if(yourProb > NEG_INFINITY) 
+                            chart.addToChart(S,t,U,v,model_->calcTreeProb(mySpan,myProb,yourSpan,yourProb,TYPE_REG));
+                    }
 #ifdef MONOTONIC_ON
-                if(!monotonic_) {
+                    if(!monotonic_) {
+#endif
+                        // f is backward
+                        yourMax = (S==s?v+1:v);
+                        for(U = min(v+l-s+S, fLen); U >= yourMax; U--) {
+                            yourSpan = Span(S,s,v,U);
+                            yourProb = chart.getFromChart(yourSpan);
+                            if(yourProb > NEG_INFINITY)
+                                chart.addToChart(S,t,u,U,model_->calcTreeProb(mySpan,myProb,yourSpan,yourProb,TYPE_INV));
+                        }
+#ifdef MONOTONIC_ON
+                    }
+#endif
+                }
+                // e is backward
+                for(S = min(t+l,eLen); S >= t; S--) {
+#ifdef MONOTONIC_ON
+                    if(!monotonic_) {
+#endif
+                        // f is forward
+                        yourMax = (S==t?u-1:u);
+                        for(U = max(u-l+S-t,0); U <= yourMax; U++) {
+                            yourSpan = Span(t,S,U,u);
+                            yourProb = chart.getFromChart(yourSpan);
+                            if(yourProb > NEG_INFINITY)
+                                chart.addToChart(s,S,U,v,model_->calcTreeProb(yourSpan,yourProb,mySpan,myProb,TYPE_INV));
+                        }
+#ifdef MONOTONIC_ON
+                    }
 #endif
                     // f is backward
-                    yourMax = (S==s?v+1:v);
-                    for(U = min(v+l-s+S, fLen); U >= yourMax; U--) {
-                        yourSpan = Span(S,s,v,U);
+                    yourMax = (S==t?v+1:v);
+                    for(U = min(v+l-S+t, fLen); U >= yourMax; U--) {
+                        yourSpan = Span(t,S,v,U);
                         yourProb = chart.getFromChart(yourSpan);
                         if(yourProb > NEG_INFINITY)
-                            chart.addToChart(S,t,u,U,model_->calcTreeProb(mySpan,myProb,yourSpan,yourProb,TYPE_INV));
+                            chart.addToChart(s,S,u,U,model_->calcTreeProb(yourSpan,yourProb,mySpan,myProb,TYPE_REG));
                     }
-#ifdef MONOTONIC_ON
-                }
-#endif
-            }
-            // e is backward
-            for(S = min(t+l,eLen); S >= t; S--) {
-#ifdef MONOTONIC_ON
-                if(!monotonic_) {
-#endif
-                    // f is forward
-                    yourMax = (S==t?u-1:u);
-                    for(U = max(u-l+S-t,0); U <= yourMax; U++) {
-                        yourSpan = Span(t,S,U,u);
-                        yourProb = chart.getFromChart(yourSpan);
-                        if(yourProb > NEG_INFINITY)
-                            chart.addToChart(s,S,U,v,model_->calcTreeProb(yourSpan,yourProb,mySpan,myProb,TYPE_INV));
-                    }
-#ifdef MONOTONIC_ON
-                }
-#endif
-                // f is backward
-                yourMax = (S==t?v+1:v);
-                for(U = min(v+l-S+t, fLen); U >= yourMax; U--) {
-                    yourSpan = Span(t,S,v,U);
-                    yourProb = chart.getFromChart(yourSpan);
-                    if(yourProb > NEG_INFINITY)
-                        chart.addToChart(s,S,u,U,model_->calcTreeProb(yourSpan,yourProb,mySpan,myProb,TYPE_REG));
                 }
             }
-            // set the probability of already-covered values to zero
-            //  to prevent double-adding of probabilities
             chart.removeFromChart(s,t,u,v);
         }
         // re-add the removed probabilities
@@ -847,7 +891,7 @@ void PIAlign::train() {
                 if(oldNodes[i]) {
                     buildSpans(oldNodes[i]); moveRight(oldNodes[i],0,0);
                     if(oldNodes[i]->span.ee != el || oldNodes[i]->span.fe != fl) {
-                        PRINT_DEBUG(oldNodes[i]->span << endl);
+                        THROW_ERROR("Bad span "<<oldNodes[i]->span);
                         throw runtime_error("Bad span");
                     }
                     tOld += oldNodes[i]->prob;
@@ -901,7 +945,7 @@ void PIAlign::train() {
                 for(int i = 0; i < myBatch; i++) {
                     int s = sentOrder[beginSent+i];
                     PRINT_DEBUG("---- rejecting removing "<<s<<" ----"<<endl);
-                    model_->removeSentence(newNodes[i], baseProbs_);
+                    SpanNode * node = model_->removeSentence(newNodes[i], baseProbs_); delete node;
                     delete newNodes[i];
                     PRINT_DEBUG("---- rejecting adding "<<s<<" ----"<<endl);
                     model_->addSentence(eCorpus_[s],fCorpus_[s],oldNodes[i],ePhrases_,fPhrases_,jointPhrases_,baseProbs_);
@@ -964,8 +1008,8 @@ void PIAlign::train() {
     }
 
     for(int s = 0; s < (int)eCorpus_.size(); s++) {
-        model_->removeSentence(nCorpus_[s], baseProbs_);
-        delete nCorpus_[s];
+        SpanNode* node = model_->removeSentence(nCorpus_[s], baseProbs_);
+        delete node; delete nCorpus_[s];
     }
 
     model_->checkEmpty();
