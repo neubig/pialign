@@ -26,6 +26,8 @@ protected:
 public:
     SymbolSet() { }
 
+    unsigned numElements() { return vocab_.size() - nextIds_.size(); }
+
     const Key & getSymbol(T id) const {
         return vocab_[id];
     }

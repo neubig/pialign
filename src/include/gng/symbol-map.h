@@ -19,6 +19,8 @@ protected:
 public:
     SymbolMap() : std::tr1::unordered_map<Key,T,Hash>() { }
 
+    unsigned numElements() { return this->size() - nextKeys_.size(); }
+
     T getId(const Key & sym, bool add = false) {
         typename SymbolMap<Key,T,Hash>::const_iterator it = find(sym);
         if(it != this->end())
@@ -54,6 +56,8 @@ public:
         for(int i = 0; i < (int)removeKeys.size(); i++)
             erase(removeKeys[i]);
     }
+
+
 
 };
 
