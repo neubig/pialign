@@ -28,13 +28,13 @@ public:
         return phraseFallback_+typeProbs_[type]+myProb+yourProb;
     }
 
-    Prob addSentence(const WordString & e, const WordString & f, SpanNode* node, StringWordSet & ePhrases, StringWordSet & fPhrases, PairWordSet & pairs, std::vector<Prob>& baseProbs);
+    Prob addSentence(const WordString & e, const WordString & f, SpanNode* node, StringWordSet & ePhrases, StringWordSet & fPhrases, PairWordSet & pairs, BaseMeasure* base);
 
-    SpanNode* removePhrasePair(WordId jId, std::vector<Prob>& baseProbs);
+    SpanNode* removePhrasePair(WordId jId, BaseMeasure* base);
 
-    SpanNode* removeSentence(const SpanNode* head, std::vector<Prob>& baseProbs){
+    SpanNode* removeSentence(const SpanNode* head, BaseMeasure* base){
         if(head == 0) return 0;
-        return removePhrasePair(head->phraseid,baseProbs);
+        return removePhrasePair(head->phraseid,base);
     }
 
     bool isHierarchical() { return true; }

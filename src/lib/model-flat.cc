@@ -4,14 +4,14 @@
 using namespace pialign;
 using namespace std;
 
-Prob FlatModel::addSentence(const WordString & e, const WordString & f, SpanNode* node, StringWordSet & ePhrases, StringWordSet & fPhrases, PairWordSet & pairs, std::vector<Prob>& baseProbs) {
+Prob FlatModel::addSentence(const WordString & e, const WordString & f, SpanNode* node, StringWordSet & ePhrases, StringWordSet & fPhrases, PairWordSet & pairs, BaseMeasure* base) {
     if(!node || !node->add) return 0;
     // if we're on a non-terminal, add the type and recurse
     Prob totProb = 0;
     if(node->type == TYPE_REG || node->type == TYPE_INV) {
         totProb += addType(node->type);
-        totProb += addSentence(e,f,node->right,ePhrases,fPhrases,pairs,baseProbs);
-        totProb += addSentence(e,f,node->left, ePhrases,fPhrases,pairs,baseProbs);
+        totProb += addSentence(e,f,node->right,ePhrases,fPhrases,pairs,base);
+        totProb += addSentence(e,f,node->left, ePhrases,fPhrases,pairs,base);
     } else {
         // add the terminal symbol
         totProb += addType(TYPE_TERM);
@@ -23,9 +23,7 @@ Prob FlatModel::addSentence(const WordString & e, const WordString & f, SpanNode
         // set the phrase and the pair
         node->phraseid = pairs.getId(std::pair<WordId,WordId>(eId,fId),true);
         if(node->baseProb != 0) {
-            if((int)baseProbs.size() <= node->phraseid) 
-                baseProbs.resize(node->phraseid+1, NEG_INFINITY);
-            baseProbs[node->phraseid] = node->baseProb;
+            base->add(node->span,node->phraseid,node->baseProb);
         }
         if(node->type == TYPE_BASE) {
             // std::cerr << "baseProb = "<<node->baseProb<<" + "<<log(phrases_.getFallbackProb())<<std::endl;
@@ -42,22 +40,22 @@ Prob FlatModel::addSentence(const WordString & e, const WordString & f, SpanNode
     return totProb;
 }
 
-SpanNode* FlatModel::removeSentence(const SpanNode* node, std::vector<Prob>& baseProbs) {
+SpanNode* FlatModel::removeSentence(const SpanNode* node, BaseMeasure* base) {
     if(!node || !node->add) return 0;
     SpanNode * ret = new SpanNode(Span(0,0,0,0));
     ret->phraseid = node->phraseid;
     if(node->type == TYPE_REG || node->type == TYPE_INV) {
         ret->type = node->type;
         ret->prob += removeType(node->type);
-        ret->left = removeSentence(node->left,baseProbs);
-        ret->right = removeSentence(node->right,baseProbs);
+        ret->left = removeSentence(node->left,base);
+        ret->right = removeSentence(node->right,base);
         ret->prob += ret->left->prob; ret->prob += ret->right->prob; 
     }
     else {
         ret->prob += removeType(TYPE_TERM);
         ret->prob += phrases_.remove(node->phraseid);
         if(phrases_.isRemovedTable()) {
-            ret->prob += baseProbs[node->phraseid];
+            ret->prob += base->getBase(node->phraseid);
             ret->type = TYPE_BASE;
         } 
         else

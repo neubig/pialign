@@ -33,9 +33,9 @@ public:
         return typeProbs_[type]+myProb+yourProb;
     }
 
-    Prob addSentence(const WordString & e, const WordString & f, SpanNode* node, StringWordSet & ePhrases, StringWordSet & fPhrases, PairWordSet & pairs, std::vector<Prob>& baseProbs);
+    Prob addSentence(const WordString & e, const WordString & f, SpanNode* node, StringWordSet & ePhrases, StringWordSet & fPhrases, PairWordSet & pairs, BaseMeasure* base);
 
-    SpanNode* removeSentence(const SpanNode* node, std::vector<Prob>& baseProbs);
+    SpanNode* removeSentence(const SpanNode* node, BaseMeasure* base);
 
 };
 

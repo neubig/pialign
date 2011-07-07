@@ -4,7 +4,6 @@
 #include <vector>
 #include "pialign/definitions.h"
 #include "pialign/parse-chart.h"
-#include "pialign/model-base.h"
 
 namespace pialign {
 
@@ -17,6 +16,7 @@ protected:
 
     std::vector<Prob> poisProbs_;
     std::vector<Prob> unigrams_;
+    std::vector<Prob> baseProbs_;
 
     // SpanProbMap baseChart_;
 
@@ -83,6 +83,19 @@ public:
     void setDebug(int debug) { debug_ = debug; }
     void setMaxLen(int maxLen) { maxLen_ = maxLen; }
     int getMaxLen() const { return maxLen_; }
+
+
+    virtual void add(Span & span, WordId pid, Prob baseProb) {
+        if((int)baseProbs_.size() <= pid)
+            baseProbs_.resize(pid+1,NEG_INFINITY);
+        baseProbs_[pid] = baseProb;
+    }
+
+    virtual Prob getBase(WordId pid) {
+        if((int)baseProbs_.size() <= pid)
+            THROW_ERROR("Phrase id "<<pid<<" is larger than size "<<baseProbs_.size());
+        return baseProbs_[pid];
+    }
 
 };
 

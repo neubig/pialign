@@ -165,8 +165,6 @@ protected:
     // average derivations for each phrase pair
     //  (used in printing the phrase table)
     std::vector<Prob> derivations_;
-    // base measure probabilities for each phrase pair
-    std::vector<Prob> baseProbs_;
 
     void trimPhraseDic(StringWordSet & dic, std::vector<WordId> & idMap);
     void trim();

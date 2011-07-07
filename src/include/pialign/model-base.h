@@ -5,6 +5,7 @@
 #include "pialign/pydist.h"
 #include "pialign/dirichletdist.h"
 #include "pialign/parse-chart.h"
+#include "pialign/base-measure.h"
 #include <vector>
 
 namespace pialign {
@@ -50,10 +51,10 @@ public:
     virtual Prob calcTreeProb(const Span & mySpan, Prob myProb, const Span & yourSpan, Prob yourProb, int type) const = 0;
     
     // add a sentence to the distribution
-    virtual Prob addSentence(const WordString & e, const WordString & f, SpanNode* node, StringWordSet & ePhrases, StringWordSet & fPhrases, PairWordSet & pairs, std::vector<Prob>& baseProbs) = 0;
+    virtual Prob addSentence(const WordString & e, const WordString & f, SpanNode* node, StringWordSet & ePhrases, StringWordSet & fPhrases, PairWordSet & pairs, BaseMeasure* base) = 0;
 
     // remove a sentence sample from the distribution
-    virtual SpanNode* removeSentence(const SpanNode* head, std::vector<Prob>& baseProbs) = 0;
+    virtual SpanNode* removeSentence(const SpanNode* head, BaseMeasure* base) = 0;
 
     // initialize probabilty buffers use to save computation time
     virtual void initializeBuffers() {

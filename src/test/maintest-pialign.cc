@@ -2,6 +2,7 @@
 #include "pialign/model-flat.h"
 #include "pialign/model-hier.h"
 #include "pialign/model-length.h"
+#include "pialign/base-unigram.h"
 
 using namespace pialign;
 using namespace std;
@@ -51,26 +52,26 @@ SpanNode * getSpanNode() {
 int testModel(ProbModel & mod, int phraseCount) {
     mod.setMaxLen(4);
     WordString e = makeWS(4), f = makeWS(3);
-    vector<Prob> baseProbs(10,-10.0);
+    BaseUnigram base;
     StringWordSet ep, fp;
     PairWordSet jp;
 
     // test adding a sample
     SpanNode * head = getSpanNode();
-    mod.addSentence(e,f,head,ep,fp,jp,baseProbs);
+    mod.addSentence(e,f,head,ep,fp,jp,&base);
     if((int)jp.size() != phraseCount) { 
         cerr << jp.size() << " != " << phraseCount << endl; 
         return er("testModel","unexpected number of phrases"); 
     }
     // test adding from generative dist also
     head->left->type = TYPE_GEN;
-    mod.addSentence(e,f,head,ep,fp,jp,baseProbs);
+    mod.addSentence(e,f,head,ep,fp,jp,&base);
 
     // test deleting the sample
-    mod.removeSentence(head,baseProbs);
+    mod.removeSentence(head,&base);
     // and delete the non-generative one
     head->left->type = TYPE_BASE;
-    mod.removeSentence(head,baseProbs);
+    mod.removeSentence(head,&base);
     if(!mod.checkEmpty())
         return er("testModel", "model was not empty");
 
@@ -86,7 +87,7 @@ int testModel(ProbModel & mod, int phraseCount) {
 int testMatch(ProbModel & mod) {
     mod.setMaxLen(4);
     WordString e = makeWS(4), f = makeWS(3);
-    vector<Prob> baseProbs(10,-10.0);
+    BaseUnigram base;
     StringWordSet ep, fp;
     PairWordSet jp;
 
@@ -101,7 +102,7 @@ int testMatch(ProbModel & mod) {
     for(int i = 0; i < size; i++) {
         head->left->type = (i < size/2 ? TYPE_BASE : TYPE_GEN);
         // cerr << "---- adding sentence "<<i<<" ----"<<endl;
-        addProbs[i] = mod.addSentence(e,f,head,ep,fp,jp,baseProbs);
+        addProbs[i] = mod.addSentence(e,f,head,ep,fp,jp,&base);
         addProb += addProbs[i];
     }
     
@@ -109,7 +110,7 @@ int testMatch(ProbModel & mod) {
     for(int i = size-1; i >= 0; i--) {
         head->left->type = (i < size/2 ? TYPE_BASE : TYPE_GEN);
         // cerr << "---- removing sentence "<<i<<" ----"<<endl;
-        SpanNode * node = mod.removeSentence(head,baseProbs);
+        SpanNode * node = mod.removeSentence(head,&base);
         remProbs[i] = node->prob;
         delete node;
         remProb += remProbs[i];

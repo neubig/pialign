@@ -887,7 +887,7 @@ void PIAlign::train() {
                 int el = eCorpus_[s].length(), fl = fCorpus_[s].length();
                 jd.words += el+fl;
                 PRINT_DEBUG("---- removing sentence "<<s<<" ----"<<endl);
-                oldNodes[i] = model_->removeSentence(nCorpus_[s], baseProbs_);
+                oldNodes[i] = model_->removeSentence(nCorpus_[s], base_);
                 if(oldNodes[i]) {
                     buildSpans(oldNodes[i]); moveRight(oldNodes[i],0,0);
                     if(oldNodes[i]->span.ee != el || oldNodes[i]->span.fe != fl) {
@@ -923,7 +923,7 @@ void PIAlign::train() {
             for(int i = 0; i < myBatch; i++) {
                 int s = sentOrder[beginSent+i];
                 PRINT_DEBUG("---- adding sentence "<<s<<" ----"<<endl);
-                tNew += model_->addSentence(eCorpus_[s],fCorpus_[s],newNodes[i],ePhrases_,fPhrases_,jointPhrases_,baseProbs_);
+                tNew += model_->addSentence(eCorpus_[s],fCorpus_[s],newNodes[i],ePhrases_,fPhrases_,jointPhrases_,base_);
             }
 
             // do rejection step
@@ -945,10 +945,10 @@ void PIAlign::train() {
                 for(int i = 0; i < myBatch; i++) {
                     int s = sentOrder[beginSent+i];
                     PRINT_DEBUG("---- rejecting removing "<<s<<" ----"<<endl);
-                    SpanNode * node = model_->removeSentence(newNodes[i], baseProbs_); delete node;
+                    SpanNode * node = model_->removeSentence(newNodes[i], base_); delete node;
                     delete newNodes[i];
                     PRINT_DEBUG("---- rejecting adding "<<s<<" ----"<<endl);
-                    model_->addSentence(eCorpus_[s],fCorpus_[s],oldNodes[i],ePhrases_,fPhrases_,jointPhrases_,baseProbs_);
+                    model_->addSentence(eCorpus_[s],fCorpus_[s],oldNodes[i],ePhrases_,fPhrases_,jointPhrases_,base_);
                     delete oldNodes[i];
                 }
                 jd.likelihood += tOld;
@@ -1008,7 +1008,7 @@ void PIAlign::train() {
     }
 
     for(int s = 0; s < (int)eCorpus_.size(); s++) {
-        SpanNode* node = model_->removeSentence(nCorpus_[s], baseProbs_);
+        SpanNode* node = model_->removeSentence(nCorpus_[s], base_);
         delete node; delete nCorpus_[s];
     }
 
@@ -1035,10 +1035,8 @@ void PIAlign::trim() {
         if(model_->calcGenProb(it->second,Span(0,eLens[it->first.first],0,fLens[it->first.second])) > NEG_INFINITY) {
             eActive[it->first.first]++; fActive[it->first.second]++;
         }
-        else {
+        else
             jDead.push_back(it->second);
-            baseProbs_[it->second] = NEG_INFINITY;
-        }
     }
     model_->setRememberNull(remNull);
     for(int i = 0; i < (int)eActive.size(); i++)

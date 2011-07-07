@@ -55,13 +55,13 @@ public:
     }
 
     
-    Prob addSentence(const WordString & e, const WordString & f, SpanNode* node, StringWordSet & ePhrases, StringWordSet & fPhrases, PairWordSet & pairs, std::vector<Prob>& baseProbs);
+    Prob addSentence(const WordString & e, const WordString & f, SpanNode* node, StringWordSet & ePhrases, StringWordSet & fPhrases, PairWordSet & pairs, BaseMeasure* base);
 
-    SpanNode* removePhrasePair(WordId jId, std::vector<Prob>& baseProbs);
+    SpanNode* removePhrasePair(WordId jId, BaseMeasure* base);
 
-    SpanNode* removeSentence(const SpanNode* node, std::vector<Prob>& baseProbs) {
+    SpanNode* removeSentence(const SpanNode* node, BaseMeasure* base) {
         if(!node) return 0;
-        return removePhrasePair(node->phraseid, baseProbs);
+        return removePhrasePair(node->phraseid, base);
     }
     
     void initialize(const WordString & e, const WordString & f, 
