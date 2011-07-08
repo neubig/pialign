@@ -12,7 +12,7 @@ public:
 
     BaseUnigram() : BaseMeasure() { }
 
-    virtual SpanProbMap getBaseChart(const WordString & e, const WordString & f) const;
+    virtual SpanProbMap * getBaseChart(const WordString & e, const WordString & f) const;
 
 };
 

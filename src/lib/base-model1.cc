@@ -29,8 +29,8 @@ void BaseModelOne::combineBases(const WordString & e, const WordString & f, std:
     }
 }
 
-SpanProbMap BaseModelOne::getBaseChart(const WordString & e, const WordString & f) const {
-    SpanProbMap baseChart;
+SpanProbMap * BaseModelOne::getBaseChart(const WordString & e, const WordString & f) const {
+    SpanProbMap * baseChart = new SpanProbMap();
 
     int T = e.length(), V = f.length();
     Prob l2 = log(2);
@@ -62,7 +62,7 @@ SpanProbMap BaseModelOne::getBaseChart(const WordString & e, const WordString & 
                     else 
                         noSym = addLogProbs(em1+fProb,fm1+eProb)-l2+poisProbs_[t-s]+poisProbs_[v-u];
                     // PRINT_DEBUG("calcBaseProb @ "<<mySpan<<", addLogProbs("<<em1<<"+"<<fProb<<","<<fm1<<"+"<<eProb<<")+"<<poisProbs_[t-s]<<"+"<<poisProbs_[v-u]<<") == "<<noSym<<" --> "<<yesSym<<std::endl);
-                    baseChart.insertProb(mySpan,noSym); // add to the base chart
+                    baseChart->insertProb(mySpan,noSym); // add to the base chart
                 }
             }
         }

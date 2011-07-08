@@ -533,7 +533,7 @@ pair<SpanNode*,Prob> PIAlign::sampleTree(int sent, const Span & mySpan, const Pa
 
     PRINT_DEBUG("sampleTree"<<mySpan << " (left="<<actLeft<<")"<<endl);
     PRINT_DEBUG(" genChart.getProb[0] == "<<genChart.getProb(mySpan)<<endl);
-    PRINT_DEBUG(" baseChart.getProb[1] == "<<baseChart.getProb(mySpan)<<" --> "<<model_->calcBaseProb(mySpan,baseChart.getProb(mySpan))<<endl);
+    PRINT_DEBUG(" baseChart->getProb[1] == "<<baseChart->getProb(mySpan)<<" --> "<<model_->calcBaseProb(mySpan,baseChart->getProb(mySpan))<<endl);
 
     // remainder are pair probabilities
     Prob tProb;
@@ -596,7 +596,8 @@ pair<SpanNode*,Prob> PIAlign::sampleTree(int sent, const Span & mySpan, const Pa
             myNode->type = TYPE_GEN;
         } else {
             myNode->type = TYPE_BASE;
-            myNode->baseProb = baseChart.find(mySpan)->second;
+            myNode->baseProb = baseChart.getProb(mySpan);
+            myNode->baseElems = baseChart.getElems(mySpan);
         }
         // if doing forced sampling, not forcing word alignments, reached the bottom, or cannot proceed due to trimming, return
         if(actNode || !forceWord_ || max(mySpan.ee-mySpan.es,mySpan.fe-mySpan.fs) == 1 || probs.size() == 2)
@@ -647,8 +648,8 @@ SpanNode * PIAlign::buildSample(int sent, ParseChart & chart, LookAhead * lookAh
 
     gettimeofday(&tInit, NULL);
     // add the base probabilities
-    SpanProbMap baseChart = base_->getBaseChart(e,f);
-    for(SpanProbMap::const_iterator it = baseChart.begin(); it != baseChart.end(); it++)
+    SpanProbMap * baseChart = base_->getBaseChart(e,f);
+    for(SpanProbMap::const_iterator it = baseChart->begin(); it != baseChart->end(); it++)
         chart.addToChart(it->first,model_->calcBaseProb(it->first,it->second));
     gettimeofday(&tBase, NULL);
 
@@ -657,7 +658,7 @@ SpanNode * PIAlign::buildSample(int sent, ParseChart & chart, LookAhead * lookAh
     gettimeofday(&tGen, NULL);
 
     // calculate the lookahead
-    lookAhead->preCalculate(e,f,baseChart,genChart,chart);
+    lookAhead->preCalculate(e,f,*baseChart,genChart,chart);
     gettimeofday(&tLook, NULL);
 
     // get the spans to preserve
@@ -683,14 +684,14 @@ SpanNode * PIAlign::buildSample(int sent, ParseChart & chart, LookAhead * lookAh
     pair<SpanNode*,Prob> head;
     if(actNode) {
         PRINT_DEBUG("---- Sampling Old Tree ----"<<endl);
-        head = sampleTree(sent,Span(0,eLen,0,fLen),chart,genChart,baseChart,true,actNode);
+        head = sampleTree(sent,Span(0,eLen,0,fLen),chart,genChart,*baseChart,true,actNode);
         head.second += sentProb; jd.oldProp += head.second;
         if(head.first) delete head.first;
     }
 
     // sample the new value
     PRINT_DEBUG("---- Sampling New Tree ----"<<endl);
-    head = sampleTree(sent,Span(0,eLen,0,fLen),chart,genChart,baseChart,true);
+    head = sampleTree(sent,Span(0,eLen,0,fLen),chart,genChart,*baseChart,true);
     head.second += sentProb; jd.newProp += head.second;
 
     gettimeofday(&tSamp, NULL);
@@ -701,6 +702,8 @@ SpanNode * PIAlign::buildSample(int sent, ParseChart & chart, LookAhead * lookAh
     jd.timeLook += timeDifference(tGen,tLook);
     jd.timeFor += timeDifference(tLook,tFor);
     jd.timeSamp += timeDifference(tFor,tSamp);
+
+    delete baseChart;
 
     return head.first;
 

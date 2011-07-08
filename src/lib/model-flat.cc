@@ -23,7 +23,7 @@ Prob FlatModel::addSentence(const WordString & e, const WordString & f, SpanNode
         // set the phrase and the pair
         node->phraseid = pairs.getId(std::pair<WordId,WordId>(eId,fId),true);
         if(node->baseProb != 0) {
-            base->add(node->span,node->phraseid,node->baseProb);
+            base->add(node->span,node->phraseid,node->baseProb,node->baseElems);
         }
         if(node->type == TYPE_BASE) {
             // std::cerr << "baseProb = "<<node->baseProb<<" + "<<log(phrases_.getFallbackProb())<<std::endl;

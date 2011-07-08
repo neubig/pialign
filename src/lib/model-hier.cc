@@ -18,7 +18,7 @@ Prob HierModel::addSentence(const WordString & e, const WordString & f, SpanNode
         rightProb = addSentence(e,f,node->right,ePhrases,fPhrases,pairs,base);
         leftProb = addSentence(e,f,node->left,ePhrases,fPhrases,pairs,base);
     } else if(toAdd != TYPE_GEN) {
-        base->add(node->span,node->phraseid,node->baseProb);
+        base->add(node->span,node->phraseid,node->baseProb,node->baseElems);
         toAdd = TYPE_TERM;
     }
     // find the left and right nodes
@@ -67,9 +67,11 @@ SpanNode* HierModel::removePhrasePair(WordId jId, BaseMeasure * base) {
         // generated directly from the base measure
         else {
             ret->baseProb = base->getBase(jId);
+            ret->baseElems = base->getElems(jId);
             ret->prob += ret->baseProb;
             PRINT_DEBUG("ret->baseProb == base["<<jId<<"] == "<<base[jId]<<endl);
             ret->type = TYPE_BASE;
+            base->remove(ret->span,ret->phraseid,ret->baseProb,ret->baseElems);
         }
     }
     // this was generated from the cache

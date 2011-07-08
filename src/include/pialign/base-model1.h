@@ -34,7 +34,7 @@ public:
     // ret[i][l][j]
     void combineBases(const WordString & e, const WordString & f, std::vector<Prob> & probs) const;
 
-    SpanProbMap getBaseChart(const WordString & e, const WordString & f) const;
+    SpanProbMap * getBaseChart(const WordString & e, const WordString & f) const;
     
     void loadModelOne(const char* e2fFile, WordSymbolSet & eVocab, WordSymbolSet & fVocab, bool forward);
     

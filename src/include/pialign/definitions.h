@@ -113,8 +113,9 @@ public:
     bool add; // whether this node was actually added to the distribution
     Prob prob; // the generative probability of this span
     Prob baseProb; // the base (log) probability of the span
+    std::vector<Prob> baseElems;
 
-    SpanNode(const Span & mySpan) : span(mySpan), left(0), right(0), phraseid(-1), type(0), add(true), prob(0), baseProb(0) { }
+    SpanNode(const Span & mySpan) : span(mySpan), left(0), right(0), phraseid(-1), type(0), add(true), prob(0) /* , baseProb(0) */ { }
     ~SpanNode() { 
         if(left) delete left;
         if(right) delete right;
@@ -214,18 +215,6 @@ public:
 
 };
 
-
-class SpanProbMap : public std::tr1::unordered_map< Span, Prob, SpanHash > {
-public:
-    Prob getProb(const Span & mySpan) const {
-        SpanProbMap::const_iterator it = find(mySpan);
-        return it == end() ? NEG_INFINITY : it->second;
-    }
-    void insertProb(const Span & mySpan, Prob myProb) {
-        insert(std::pair<Span,Prob>(mySpan,myProb));
-    }
-};
-
 // sample a single set of log probabilities
 //  return the sampled ID and the log probability of the sample
 inline void normalizeLogProbs(std::vector<Prob> & vec, double anneal = 1) {
@@ -288,6 +277,27 @@ public:
         }
         return ret;
     }
+
+};
+
+class SpanProbMap : public std::tr1::unordered_map< Span, Prob, SpanHash > {
+public:
+
+    SpanProbMap() : std::tr1::unordered_map< Span, Prob, SpanHash >() { }
+    virtual ~SpanProbMap() { }
+
+    Prob getProb(const Span & mySpan) const {
+        SpanProbMap::const_iterator it = find(mySpan);
+        return it == end() ? NEG_INFINITY : it->second;
+    }
+    void insertProb(const Span & mySpan, Prob myProb) {
+        insert(std::pair<Span,Prob>(mySpan,myProb));
+    }
+ 
+    virtual std::vector<Prob> getElems(const Span & mySpan) const {
+        return std::vector<Prob>();
+    }
+
 
 };
 

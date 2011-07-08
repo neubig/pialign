@@ -23,7 +23,7 @@ public:
 
     void trainCooc(Corpus & es, const WordSymbolSet & eVocab, Corpus & fs, const WordSymbolSet & fVocab, Prob coocDisc);
 
-    SpanProbMap getBaseChart(const WordString & e, const WordString & f) const;
+    SpanProbMap * getBaseChart(const WordString & e, const WordString & f) const;
 
 
 };

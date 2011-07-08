@@ -17,6 +17,7 @@ protected:
     std::vector<Prob> poisProbs_;
     std::vector<Prob> unigrams_;
     std::vector<Prob> baseProbs_;
+    std::vector< std::vector<Prob> > baseElems_;
 
     // SpanProbMap baseChart_;
 
@@ -43,7 +44,7 @@ public:
     // add base probabilities for the unigram model
     //  e,f strings, logPenalty is the additional log probability added
     //  by fallbacks, etc in the model, chart is the overall chart
-    virtual SpanProbMap getBaseChart(const WordString & e, const WordString & f) const = 0;
+    virtual SpanProbMap * getBaseChart(const WordString & e, const WordString & f) const = 0;
 
     virtual void trainPoisson(Prob avgLen, Prob nullProb) {
 
@@ -84,17 +85,27 @@ public:
     virtual void setMaxLen(int maxLen) { maxLen_ = maxLen; }
     virtual int getMaxLen() const { return maxLen_; }
 
-
-    virtual void add(Span & span, WordId pid, Prob baseProb) {
-        if((int)baseProbs_.size() <= pid)
+    virtual void add(Span & span, WordId pid, Prob baseProb, const std::vector<Prob> & baseElems) {
+        if((int)baseProbs_.size() <= pid) {
             baseProbs_.resize(pid+1,NEG_INFINITY);
+            baseElems_.resize(pid+1);
+        }
         baseProbs_[pid] = baseProb;
+        baseElems_[pid] = baseElems;
     }
+
+    virtual void remove(Span & span, WordId pid, Prob baseProb, const std::vector<Prob> & baseElems) { }
 
     virtual Prob getBase(WordId pid) {
         if((int)baseProbs_.size() <= pid)
             THROW_ERROR("Phrase id "<<pid<<" is larger than size "<<baseProbs_.size());
         return baseProbs_[pid];
+    }
+    
+    virtual std::vector<Prob> getElems(WordId pid) {
+        if((int)baseElems_.size() <= pid)
+            THROW_ERROR("Phrase id "<<pid<<" is larger than size "<<baseElems_.size());
+        return baseElems_[pid];
     }
 
 };

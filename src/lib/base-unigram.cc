@@ -3,8 +3,8 @@
 
 using namespace pialign;
 
-SpanProbMap BaseUnigram::getBaseChart(const WordString & e, const WordString & f) const {
-    SpanProbMap baseChart;
+SpanProbMap * BaseUnigram::getBaseChart(const WordString & e, const WordString & f) const {
+    SpanProbMap * baseChart = new SpanProbMap();
     int T = e.length(), V = f.length();
     Prob eProb, fProb, noSym; //, yesSym;
     for(int s = 0; s <= T; s++) {
@@ -20,7 +20,7 @@ SpanProbMap BaseUnigram::getBaseChart(const WordString & e, const WordString & f
                     Span mySpan(s,t,u,v);
                     noSym = fProb+eProb+poisProbs_[t-s]+poisProbs_[v-u];
                     // std::cerr << "BaseUnigram::calcBaseProb"<<mySpan<<" == "<<fProb<<"+"<<eProb<<"+"<<poisProbs_[t-s]<<"+"<<poisProbs_[v-u]<<" == "<<noSym<<" --> "<<yesSym<<std::endl;
-                    baseChart.insertProb(mySpan,noSym);       // add to the base chart
+                    baseChart->insertProb(mySpan,noSym);       // add to the base chart
                 }
             }
         }

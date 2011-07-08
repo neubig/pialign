@@ -39,7 +39,7 @@ Prob LengthModel::addSentence(const WordString & e, const WordString & f, SpanNo
         node->prob += sepSplits_[idx];
         PRINT_DEBUG(" LengthModel::splitProb("<<idx<<"): "<<sepSplits_[idx]<<endl);
     } else if(toAdd != TYPE_GEN) {
-        base->add(node->span,node->phraseid,node->baseProb);
+        base->add(node->span,node->phraseid,node->baseProb,node->baseElems);
         node->prob += node->baseProb;
         PRINT_DEBUG(" LengthModel::baseProb("<<node->phraseid<<"): "<<node->baseProb<<endl);
         toAdd = TYPE_TERM;
