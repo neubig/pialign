@@ -1012,7 +1012,7 @@ void PIAlign::train() {
 
         // print stats
         model_->printStats(cerr);
-        cerr << " Phrases: e="<<ePhrases_.size()<<", f="<<fPhrases_.size()<<", j="<<jointPhrases_.size()<<std::endl;
+        cerr << " Phrases: e="<<ePhrases_.numElements()<<", f="<<fPhrases_.numElements()<<", j="<<jointPhrases_.numElements()<<std::endl;
         jd.printStats(cerr);
     }
 
