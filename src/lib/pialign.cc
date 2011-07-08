@@ -9,6 +9,7 @@
 #include "pialign/base-model1.h"
 #include "pialign/base-unigram.h"
 #include "pialign/base-phrasecooc.h"
+#include "pialign/base-compound.h"
 #include "pialign/definitions.h"
 
 #include "pialign/model-hier.h"
@@ -167,7 +168,6 @@ void PIAlign::loadConfig(int argc, const char** argv) {
                 }
             }
             else if(!strcmp(argv[i],"-coocdisc"))       coocDisc_ = atof(argv[++i]);
-            else if(!strcmp(argv[i],"-cooccut"))        coocCut_ = atof(argv[++i]);
             else if(!strcmp(argv[i],"-nullprob"))       nullProb_ = atof(argv[++i]);
             else if(!strcmp(argv[i],"-termstren"))      termStrength_ = atof(argv[++i]);
             else if(!strcmp(argv[i],"-termprior"))      termPrior_ = atof(argv[++i]);
@@ -286,7 +286,8 @@ void PIAlign::initialize() {
 
     // --------------- train the base model ---------------------
     // make the model one probabilities and logify if necessary
-    if(baseType_ == BASE_MODEL1 || baseType_ == BASE_MODEL1G) {
+    if(baseType_ == BASE_MODEL1 || baseType_ == BASE_MODEL1G || baseType_ == BASE_PHRASECOOC_LL) {
+        // train model one
         BaseModelOne * model1 = new BaseModelOne();
         if(le2fFile_)
             model1->loadModelOne(le2fFile_,eVocab_,fVocab_,true);
@@ -296,14 +297,19 @@ void PIAlign::initialize() {
             model1->loadModelOne(lf2eFile_,fVocab_,eVocab_,false);
         else
             model1->trainModelOne(fCorpus_, eCorpus_, fVocab_.size(), eVocab_.size(), maxSentLen_);
-        base_ = model1;
         if(baseType_ == BASE_MODEL1G)
-            ((BaseModelOne*)base_)->setGeometric(true);
-    }
-    // train a phrase-based base measure using the dice coefficient
-    else if(baseType_ == BASE_PHRASECOOC_LL) {
-        base_ = new BasePhraseCooc();
-        ((BasePhraseCooc*)base_)->trainCooc(eCorpus_, eVocab_, fCorpus_, fVocab_, coocDisc_, coocCut_);
+            model1->setGeometric(true);
+        // if necessary, train the phrase model and make it a compound
+        if(baseType_ == BASE_PHRASECOOC_LL) {
+            BasePhraseCooc * cooc = new BasePhraseCooc();
+            cooc->trainCooc(eCorpus_, eVocab_, fCorpus_, fVocab_, coocDisc_);
+            BaseCompound * comp = new BaseCompound();
+            comp->addMeasure(model1);
+            comp->addMeasure(cooc);
+            base_ = comp;
+        } else {
+            base_ = model1;
+        }
     }
     // train a unigram model
     else
@@ -664,7 +670,7 @@ SpanNode * PIAlign::buildSample(int sent, ParseChart & chart, LookAhead * lookAh
     Prob sentProb = 0; // model_->calcSentProb(sentSpan);
     Prob myLik = chart.getFromChart(sentSpan)+sentProb; jd.chartProb += myLik;
     if(myLik <= NEG_INFINITY) {
-        cerr << "WARNING: parsing failed! loosening beam to prob="<<probWidth_<<endl;
+        cerr << "WARNING: parsing failed! loosening beam to prob="<<pWidth<<endl;
         chart.setDebug(1); // base_->setDebug(1); model_->setDebug(1);
         SpanNode* node = buildSample(sent,chart,lookAhead,pWidth+log(10),jd,actNode);
         chart.setDebug(0); // base_->setDebug(0); model_->setDebug(0);

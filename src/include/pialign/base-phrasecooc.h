@@ -7,7 +7,7 @@
 
 namespace pialign {
 
-class BasePhraseCooc : public BaseUnigram {
+class BasePhraseCooc : public BaseMeasure {
 
 protected:
 
@@ -17,11 +17,11 @@ protected:
 
 public:
 
-    BasePhraseCooc() : BaseUnigram() { }
+    BasePhraseCooc() : BaseMeasure() { }
 
     void substringMatrix(Corpus & corp, const WordSymbolSet & vocab, int boost, std::vector<WordString> & subs, std::vector< std::set<int> > & sents, Prob coocDisc);
 
-    void trainCooc(Corpus & es, const WordSymbolSet & eVocab, Corpus & fs, const WordSymbolSet & fVocab, Prob coocDisc, Prob coocCut);
+    void trainCooc(Corpus & es, const WordSymbolSet & eVocab, Corpus & fs, const WordSymbolSet & fVocab, Prob coocDisc);
 
     SpanProbMap getBaseChart(const WordString & e, const WordString & f) const;
 

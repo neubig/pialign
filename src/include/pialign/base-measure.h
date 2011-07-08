@@ -45,7 +45,7 @@ public:
     //  by fallbacks, etc in the model, chart is the overall chart
     virtual SpanProbMap getBaseChart(const WordString & e, const WordString & f) const = 0;
 
-    void trainPoisson(Prob avgLen, Prob nullProb) {
+    virtual void trainPoisson(Prob avgLen, Prob nullProb) {
 
         // initialize poisson probabilities
         Prob poisSum = 0.0;
@@ -61,7 +61,7 @@ public:
 
     }
 
-    void trainUnigrams(const Corpus & es, int eSize, const Corpus & fs, int fSize) {
+    virtual void trainUnigrams(const Corpus & es, int eSize, const Corpus & fs, int fSize) {
         // make the unigram probabilities
         std::vector<int> sums(eSize+fSize,0);
         unigrams_.resize(sums.size(),0);
@@ -80,9 +80,9 @@ public:
 //        return it == baseChart_.end() ? NEG_INFINITY : it->second;
 //
 //    }
-    void setDebug(int debug) { debug_ = debug; }
-    void setMaxLen(int maxLen) { maxLen_ = maxLen; }
-    int getMaxLen() const { return maxLen_; }
+    virtual void setDebug(int debug) { debug_ = debug; }
+    virtual void setMaxLen(int maxLen) { maxLen_ = maxLen; }
+    virtual int getMaxLen() const { return maxLen_; }
 
 
     virtual void add(Span & span, WordId pid, Prob baseProb) {

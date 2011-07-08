@@ -18,8 +18,8 @@ SpanProbMap BaseUnigram::getBaseChart(const WordString & e, const WordString & f
                 for(int v = (s==t?u+1:u); v <= actV; v++) {
                     if(u != v) fProb += unigrams_[f[v-1]];
                     Span mySpan(s,t,u,v);
-                    noSym = uniPen_+fProb+eProb+poisProbs_[t-s]+poisProbs_[v-u];
-                    // std::cerr << "BaseUnigram::calcBaseProb"<<mySpan<<" == "<<uniPen_<<"+"<<fProb<<"+"<<eProb<<"+"<<poisProbs_[t-s]<<"+"<<poisProbs_[v-u]<<" == "<<noSym<<" --> "<<yesSym<<std::endl;
+                    noSym = fProb+eProb+poisProbs_[t-s]+poisProbs_[v-u];
+                    // std::cerr << "BaseUnigram::calcBaseProb"<<mySpan<<" == "<<fProb<<"+"<<eProb<<"+"<<poisProbs_[t-s]<<"+"<<poisProbs_[v-u]<<" == "<<noSym<<" --> "<<yesSym<<std::endl;
                     baseChart.insertProb(mySpan,noSym);       // add to the base chart
                 }
             }

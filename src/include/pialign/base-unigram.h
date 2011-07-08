@@ -8,13 +8,9 @@ namespace pialign {
 
 class BaseUnigram : public BaseMeasure {
 
-protected:
-
-    Prob uniPen_;
-
 public:
 
-    BaseUnigram() : BaseMeasure(), uniPen_(0) { }
+    BaseUnigram() : BaseMeasure() { }
 
     virtual SpanProbMap getBaseChart(const WordString & e, const WordString & f) const;
 

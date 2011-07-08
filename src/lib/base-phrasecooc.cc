@@ -46,7 +46,7 @@ void BasePhraseCooc::substringMatrix(Corpus & corp, const WordSymbolSet & vocab,
     cerr << "T.size="<<T.size()<<", vocab.size()="<<vocab.size()<<", nodes="<<nodeNum<<", words="<<subs.size()<<endl;
 }
 
-void BasePhraseCooc::trainCooc(Corpus & es, const WordSymbolSet & eVocab, Corpus & fs, const WordSymbolSet & fVocab, Prob coocDisc, Prob coocCut) {
+void BasePhraseCooc::trainCooc(Corpus & es, const WordSymbolSet & eVocab, Corpus & fs, const WordSymbolSet & fVocab, Prob coocDisc) {
     vector< WordString > eStrs, fStrs;
     vector< set<int> > eSents, fSents;
     // calculate the substring sparse matrix in e
@@ -98,30 +98,14 @@ void BasePhraseCooc::trainCooc(Corpus & es, const WordSymbolSet & eVocab, Corpus
         }
     }
     // normalize probabilities and remove low probability values
-    cerr << "Normalizing and cleaning probabilities " << endl;
-    vector< pair<WordId,WordId> > remove;
-    uniPen_ = 0;
-    for(PairProbMap::iterator it = jProbs_.begin(); it != jProbs_.end(); it++) {
-        it->second /= sum;
-        if(it->second < coocCut) {
-            remove.push_back(it->first);
-            uniPen_ += it->second;
-        }
-        it->second = log(it->second);
-    }
-    for(unsigned i = 0; i < remove.size(); i++)
-        jProbs_.erase(remove[i]);
-    if(uniPen_ == 0)
-        cerr << "WARNING: Base measure unigram probability is 0, try setting -cooccut higher" << endl;
-    else {
-        cerr << "Unigram probability "<<uniPen_<<endl;
-        uniPen_ = log(uniPen_);
-    }
+    cerr << "Normalizing probabilities " << endl;
+    for(PairProbMap::iterator it = jProbs_.begin(); it != jProbs_.end(); it++)
+        it->second = log(it->second/sum);
 }
 
 SpanProbMap BasePhraseCooc::getBaseChart(const WordString & e, const WordString & f) const {
 
-    SpanProbMap baseChart = BaseUnigram::getBaseChart(e,f);
+    SpanProbMap baseChart;
  
     // add the span probabilities
     vector< LabeledEdge > eEdges = eSymbols_.findEdges(e,e.length());
