@@ -66,7 +66,14 @@ void BasePhraseCooc::trainCooc(Corpus & es, const WordSymbolSet & eVocab, Corpus
     cerr << "Calculating co-occurence"<<endl;
     Prob sum = 0;
     vector<WordId> eIds(eSents.size(), -1), fIds(fSents.size(), -1);
+    unsigned lastSent = 0;
     for(unsigned i = 0; i < eSents.size(); i++) {
+        if(i / 100 != lastSent) {
+            cerr << "\r" << i;
+            lastSent = i/100;
+        }
+        if(eSents[i].size() <= coocDisc)
+            continue;
         Counter<int,int> myCounts;
         for(set<int>::const_iterator eit = eSents[i].begin(); eit != eSents[i].end(); eit++) {
             for(vector<int>::const_iterator fit = fWords[*eit].begin(); fit != fWords[*eit].end(); fit++) {
