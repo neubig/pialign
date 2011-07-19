@@ -210,6 +210,7 @@ public:
             int left = (int)(((double)rand())/RAND_MAX*set.total);
             while((left -= it->count) >= 0)
                 it++;
+            if(it == set.end()) it--;
         }
         it->count--;
         set.total--;
