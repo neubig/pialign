@@ -955,10 +955,20 @@ void PIAlign::train() {
                     int s = sentOrder[beginSent+i];
                     PRINT_DEBUG("---- rejecting removing "<<s<<" ----"<<endl);
                     SpanNode * node = model_->removeSentence(newNodes[i], base_); delete node;
-                    delete newNodes[i];
                     PRINT_DEBUG("---- rejecting adding "<<s<<" ----"<<endl);
-                    model_->addSentence(eCorpus_[s],fCorpus_[s],oldNodes[i],ePhrases_,fPhrases_,jointPhrases_,base_);
+                    // this dies frequently, so catch the error and at least print the tree
+                    try {
+                        model_->addSentence(eCorpus_[s],fCorpus_[s],oldNodes[i],ePhrases_,fPhrases_,jointPhrases_,base_);
+                    } catch(std::runtime_error e) {
+                        cerr << endl << "Died when re-adding sentence." << endl;
+                        cerr << " Original sentence (to be re-added):" << endl;
+                        printSample(eCorpus_[s],fCorpus_[s],oldNodes[i],cerr);
+                        cerr << " Rejected sentence:" << endl;
+                        printSample(eCorpus_[s],fCorpus_[s],newNodes[i],cerr);
+                        throw e;
+                    }
                     delete oldNodes[i];
+                    delete newNodes[i];
                 }
                 jd.likelihood += tOld;
             }

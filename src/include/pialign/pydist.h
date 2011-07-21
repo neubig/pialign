@@ -207,10 +207,9 @@ public:
         int mySize = set.size();
         TSetIter it = set.begin(); 
         if(mySize > 1) {
-            int left = (int)(((double)rand())/RAND_MAX*set.total);
+            int left = rand() % set.total;
             while((left -= it->count) >= 0)
                 it++;
-            if(it == set.end()) it--;
         }
         it->count--;
         set.total--;
