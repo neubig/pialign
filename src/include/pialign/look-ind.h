@@ -83,7 +83,7 @@ public:
         unsigned eSize = (e.length()+1);
         if(eFor_.size() <= eSize) { eBuff_.resize(eSize*eSize); eFor_.resize(eSize); eBack_.resize(eSize); }
         std::fill( eBuff_.begin(), eBuff_.begin()+(eSize*eSize), NEG_INFINITY );
-        unsigned fSize = (f.length()+1)*(f.length()+1);
+        unsigned fSize = (f.length()+1);
         if(fFor_.size() <= fSize) { fBuff_.resize(fSize*fSize); fFor_.resize(fSize); fBack_.resize(fSize); }
         std::fill( fBuff_.begin(), fBuff_.begin()+(fSize*fSize), NEG_INFINITY );
         // make the buffers
