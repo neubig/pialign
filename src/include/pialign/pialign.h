@@ -232,7 +232,7 @@ public:
     // void *buildSamples(void* ptr);
     SpanNode * buildSample(int s, ParseChart & chart, LookAhead * lookAhead, Prob pWidth, JobDetails & jd, SpanNode* actNode) const;
     // WordId addSample(const WordString & e, const WordString & f, SpanNode * myNode);
-    void printSample(const WordString & e, const WordString & f, const SpanNode * myNode, std::ostream & sampleOut);
+    void printSample(const WordString & e, const WordString & f, const SpanNode * myNode, std::ostream & sampleOut, bool debug);
 
     void buildSpans(SpanNode* node);
     void moveRight(SpanNode* node, int e, int f);

@@ -38,47 +38,48 @@ public:
         buff[idx] = std::max(buff[idx],p);
     }
 
-    void addForProbs(const std::vector<Prob> & buff, std::vector<Prob> & forward, int len) {
+    void addForProbs(const std::vector<Prob> & buff, std::vector<Prob> & forward, int len, int maxLen) {
         std::fill(forward.begin(),forward.end(),NEG_INFINITY);
         forward[0] = 0;
         if(!add_) {
             for(int end = 1; end <= len; end++)
-                for(int start = 0; start < end; start++)
+                for(int start = std::max(0,end-maxLen); start < end; start++)
                     forward[end] = std::max(forward[end],forward[start]+getSpan(start,end,len,buff));
         } else {
             for(int end = 1; end <= len; end++)
-                for(int start = 0; start < end; start++)
+                for(int start = std::max(0,end-maxLen); start < end; start++)
                     forward[end] = addLogProbs(forward[end],forward[start]+getSpan(start,end,len,buff));
         }
             
         // // --- print ---
-        PRINT_DEBUG("Forward:");
-        for(int i = 0; i <= len; i++)
-            PRINT_DEBUG(" " << forward[i]);
-        PRINT_DEBUG(std::endl);
+        // PRINT_DEBUG("Forward:");
+        // for(int i = 0; i <= len; i++)
+        //     PRINT_DEBUG(" " << forward[i]);
+        // PRINT_DEBUG(std::endl);
     }
-    void addBackProbs(const std::vector<Prob> & buff, std::vector<Prob> & backward, int len) {
+    void addBackProbs(const std::vector<Prob> & buff, std::vector<Prob> & backward, int len, int maxLen) {
         std::fill(backward.begin(),backward.end(),NEG_INFINITY);
         backward[len] = 0;
         if(!add_) {
             for(int start = len-1; start >= 0; start--)
-                for(int end = start+1; end <= len; end++)
+                for(int end = start+maxLen; end > start; end--)
                     backward[start] = std::max(backward[start],backward[end]+getSpan(start,end,len,buff));
         } else {
             for(int start = len-1; start >= 0; start--)
-                for(int end = start+1; end <= len; end++)
+                for(int end = start+maxLen; end > start; end--)
                     backward[start] = addLogProbs(backward[start],backward[end]+getSpan(start,end,len,buff));
         }
 
         // // --- print ---
-        PRINT_DEBUG("Backward:");
-        for(int i = 0; i <= len; i++)
-            PRINT_DEBUG(" " << backward[i]);
-        PRINT_DEBUG(std::endl);
+        // PRINT_DEBUG("Backward:");
+        // for(int i = 0; i <= len; i++)
+        //     PRINT_DEBUG(" " << backward[i]);
+        // PRINT_DEBUG(std::endl);
     }
     
     void preCalculate(const WordString & e, const WordString & f, const SpanProbMap & base, const SpanProbMap & gen, const ParseChart & chart) {    
         // clear the buffers
+        int eMax = 0, fMax = 0;
         unsigned eSize = (e.length()+1);
         if(eFor_.size() <= eSize) { eBuff_.resize(eSize*eSize); eFor_.resize(eSize); eBack_.resize(eSize); }
         std::fill( eBuff_.begin(), eBuff_.begin()+(eSize*eSize), NEG_INFINITY );
@@ -89,20 +90,24 @@ public:
         for(SpanProbMap::const_iterator it = base.begin(); it != base.end(); it++) {
             PRINT_DEBUG("adding base "<<it->first<<", "<<it->second<<std::endl);
             Prob prob = chart.getFromChart(it->first);
+            eMax = std::max(it->first.ee-it->first.es,eMax);
+            fMax = std::max(it->first.fe-it->first.fs,fMax);
             updateSpan(it->first.es,it->first.ee,e.length(),prob,eBuff_);
             updateSpan(it->first.fs,it->first.fe,f.length(),prob,fBuff_);
         }
         for(SpanProbMap::const_iterator it = gen.begin(); it != gen.end(); it++) {
-            PRINT_DEBUG("adding base "<<it->first<<", "<<it->second<<std::endl);
+            PRINT_DEBUG("adding gen "<<it->first<<", "<<it->second<<std::endl);
             Prob prob = chart.getFromChart(it->first);
+            eMax = std::max(it->first.ee-it->first.es,eMax);
+            fMax = std::max(it->first.fe-it->first.fs,fMax);
             updateSpan(it->first.es,it->first.ee,e.length(),prob,eBuff_);
             updateSpan(it->first.fs,it->first.fe,f.length(),prob,fBuff_);
         }
         // count the probabilities
-        addForProbs(eBuff_,eFor_,e.length());
-        addForProbs(fBuff_,fFor_,f.length());
-        addBackProbs(eBuff_,eBack_,e.length());
-        addBackProbs(fBuff_,fBack_,f.length());
+        addForProbs(eBuff_,eFor_,e.length(),eMax);
+        addForProbs(fBuff_,fFor_,f.length(),fMax);
+        addBackProbs(eBuff_,eBack_,e.length(),eMax);
+        addBackProbs(fBuff_,fBack_,f.length(),fMax);
     }
     
 

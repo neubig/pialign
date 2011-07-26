@@ -578,6 +578,8 @@ pair<SpanNode*,Prob> PIAlign::sampleTree(int sent, const Span & mySpan, const Pa
             return pair<SpanNode*,Prob>(0,NEG_INFINITY);
         }
         ans = discreteSample(normProbs,1.0);
+        if(probs[ans] <= NEG_INFINITY)
+            throw std::runtime_error("Picked 0 probability");
     }
     Prob ansProb = (add?log(normProbs[ans]):0);
 
@@ -605,6 +607,8 @@ pair<SpanNode*,Prob> PIAlign::sampleTree(int sent, const Span & mySpan, const Pa
         // continue sampling
         add = false;
         ans = discreteSample(&normProbs[2],normProbs.size()-2)+2;
+        if(probs[ans] <= NEG_INFINITY)
+            throw std::runtime_error("Picked 0 probability");
     }
 
     const pair<Span,Span> & myPair = pairs[ans-2];
@@ -710,7 +714,7 @@ SpanNode * PIAlign::buildSample(int sent, ParseChart & chart, LookAhead * lookAh
 }
 
 // print a single sample in tree format
-void PIAlign::printSample(const WordString & e, const WordString & f, const SpanNode * myNode, ostream & sampleOut) {
+void PIAlign::printSample(const WordString & e, const WordString & f, const SpanNode * myNode, ostream & sampleOut, bool debug) {
 
     // if there are no children, print the phrase
     if(!myNode->left) 
@@ -722,10 +726,13 @@ void PIAlign::printSample(const WordString & e, const WordString & f, const Span
         bool ordered = (myNode->left->span.fe == myNode->right->span.fs);
         // print
         sampleOut << (bracket?"{ ":"") << (ordered?"[ ":"< ");
-        printSample(e,f,myNode->left,sampleOut);
+        printSample(e,f,myNode->left,sampleOut, debug);
         sampleOut << " ";
-        printSample(e,f,myNode->right,sampleOut);
+        printSample(e,f,myNode->right,sampleOut, debug);
         sampleOut << (ordered?" ]":" >") << (bracket?" }":"");
+    }
+    if(debug) {
+        sampleOut << " s="<<myNode->span<<", i="<<myNode->phraseid<<", t="<<myNode->type<<", p="<<myNode->prob<<", b="<<myNode->baseProb<<", a="<<myNode->add<<", g="<<model_->calcGenProb(myNode->phraseid,myNode->span)<<endl;
     }
         
 }
@@ -962,9 +969,10 @@ void PIAlign::train() {
                     } catch(std::runtime_error e) {
                         cerr << endl << "Died when re-adding sentence." << endl;
                         cerr << " Original sentence (to be re-added):" << endl;
-                        printSample(eCorpus_[s],fCorpus_[s],oldNodes[i],cerr);
-                        cerr << " Rejected sentence:" << endl;
-                        printSample(eCorpus_[s],fCorpus_[s],newNodes[i],cerr);
+                        printSample(eCorpus_[s],fCorpus_[s],oldNodes[i],cerr,true);
+                        cerr << endl << " Rejected sentence:" << endl;
+                        printSample(eCorpus_[s],fCorpus_[s],newNodes[i],cerr,true);
+                        cerr << endl << "At rejection tn="<<tNew<<", to="<<tOld<<", pn="<<jd.newProp<<" ("<<jd.newProp+jd.chartProb<<"), po="<<jd.oldProp<<" ("<<jd.oldProp+jd.chartProb<<") == "<<accept<<": "<<(isAccepted?"accept":"REJECT")<<endl;
                         throw e;
                     }
                     delete oldNodes[i];
@@ -998,7 +1006,7 @@ void PIAlign::train() {
             ofstream sampleOut(name.str().c_str());
 #endif
             for(int s = 0; s < (int)eCorpus_.size(); s++) {
-                if(nCorpus_[s]) printSample(eCorpus_[s],fCorpus_[s],nCorpus_[s],sampleOut);
+                if(nCorpus_[s]) printSample(eCorpus_[s],fCorpus_[s],nCorpus_[s],sampleOut,false);
                 sampleOut << endl;
             }
 

@@ -115,7 +115,7 @@ public:
     Prob baseProb; // the base (log) probability of the span
     std::vector<Prob> baseElems;
 
-    SpanNode(const Span & mySpan) : span(mySpan), left(0), right(0), phraseid(-1), type(0), add(true), prob(0) /* , baseProb(0) */ { }
+    SpanNode(const Span & mySpan) : span(mySpan), left(0), right(0), phraseid(-1), type(0), add(true), prob(0), baseProb(NEG_INFINITY) { }
     ~SpanNode() { 
         if(left) delete left;
         if(right) delete right;

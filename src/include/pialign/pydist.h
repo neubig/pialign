@@ -152,10 +152,11 @@ public:
     // count is zero, but there is still one cached
     void addExisting(T id) {
         TSet & set = counts_.addTableSet(id);
-#ifdef DEBUG_ON
-        if(set.size() == 0)
-            throw std::runtime_error("PyDist::addExisting with no tables");
-#endif
+        if(set.size() == 0) {
+            std::cerr << "PyDist::addExisting for "<<id<<" with no tables"<<std::endl;
+            addNew(id,-1,-1,TYPE_TERM);
+            return;
+        }
         // std::cerr << " pydist::addExisting("<<id<<")"<<std::endl;
         int mySize = set.size();
         TSetIter it = set.begin();
