@@ -8,8 +8,8 @@ Prob HierModel::addSentence(const WordString & e, const WordString & f, SpanNode
     // get the phrase IDs
     const Span & mySpan = node->span;
     int s=mySpan.es,t=mySpan.ee,u=mySpan.fs,v=mySpan.fe;
-    WordId eId = ePhrases.getId(e.substr(s,t-s),true),
-        fId = fPhrases.getId(f.substr(u,v-u),true);
+    WordId eId = ePhrases.getId(&e[s],t-s,true),
+        fId = fPhrases.getId(&f[u],v-u,true);
     node->phraseid = pairs.getId(pair<WordId,WordId>(eId,fId),true);
     int toAdd = node->type;
     // handle either non-terminals or terminals

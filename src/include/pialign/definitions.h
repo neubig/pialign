@@ -17,6 +17,7 @@
 #include "gng/string.h"
 #include "gng/symbol-set.h"
 #include "gng/symbol-map.h"
+#include "gng/symbol-trie.h"
 #include <vector>
 #include <cmath>
 #include <cstdlib>
@@ -136,16 +137,17 @@ public:
 class WordString {
 
 protected:
-    WordId* ptr_;
+    const WordId* ptr_;
     size_t len_;
 
 public:
 
     WordString() : ptr_(0), len_(0) { }
-    WordString(WordId* ptr, size_t len) : ptr_(ptr), len_(len) { }
+    WordString(const WordId* ptr, size_t len) : ptr_(ptr), len_(len) { }
 
     size_t length() const { return len_; }
-    WordId operator[](size_t idx) const { return ptr_[idx]; }
+    const WordId &operator[](size_t idx) const { return ptr_[idx]; }
+    // WordId &operator[](size_t idx) { return ptr_[idx]; }
 
     void setLength(size_t len) { len_ = len; }
 
@@ -158,7 +160,7 @@ public:
         return hash;
     }
 
-    WordId* getPointer() { return ptr_; }
+    const WordId* getPointer() const { return ptr_; }
 
 };
 
@@ -194,7 +196,7 @@ typedef std::pair<Prob, Span> ProbSpan;
 typedef std::vector< ProbSpan > ProbSpanVec;
 
 
-class StringWordSet : public gng::SymbolSet< WordString, WordId, gng::GenericHash<WordString> > {
+class StringWordSet : public gng::SymbolTrie< WordId, WordId > {
 
 public:
       
@@ -205,7 +207,7 @@ public:
         for(int i = 0; i <= T; i++) {
             jLim = std::min(i+maxLen,T);
             for(int j = i; j <= jLim; j++) {
-                WordId wid = this->getId(str.substr(i,j-i));
+                WordId wid = this->getId(&(str[i]),j-i);
                 if(wid >= 0) 
                     ret.push_back(LabeledEdge(i,j,wid));
             }

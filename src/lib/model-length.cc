@@ -26,8 +26,8 @@ Prob LengthModel::addSentence(const WordString & e, const WordString & f, SpanNo
     node->prob = 0;
     const Span & mySpan = node->span;
     int s=mySpan.es,t=mySpan.ee,u=mySpan.fs,v=mySpan.fe;
-    WordId eId = ePhrases.getId(e.substr(s,t-s),true),
-        fId = fPhrases.getId(f.substr(u,v-u),true);
+    WordId eId = ePhrases.getId(&e[s],t-s,true),
+        fId = fPhrases.getId(&f[u],v-u,true);
     // get the phrase pair ID and save the base probability if necessary
     node->phraseid = pairs.getId(std::pair<WordId,WordId>(eId,fId),true);
     int idx = saveIdx(node->phraseid,node->span.length()-1);

@@ -12,7 +12,7 @@ void BaseModelOne::combineBases(const WordString & e, const WordString & f, std:
         int myE = e[i];
         Prob nullProb = getCond(myE,0);
         for(int j = 0; j < J-1; j++) {
-            // add zero and one values values
+            // add zero and one values
             base[j-J] = nullProb;
             base[j] = getCond(myE,f[j]);
             PRINT_DEBUG("combineBases("<<i<<","<<j<<") == "<<base[j]<<std::endl)
