@@ -202,15 +202,13 @@ public:
       
     // find all active phrases in a string
     std::vector<LabeledEdge> findEdges(const WordString & str, int maxLen) const {
-        int T = str.length(), jLim;
-        std::vector<LabeledEdge> ret;    
+        int T = str.length();
+        std::vector<LabeledEdge> ret;
+        const WordId* base = &str[0];
         for(int i = 0; i <= T; i++) {
-            jLim = std::min(i+maxLen,T);
-            for(int j = i; j <= jLim; j++) {
-                WordId wid = this->getId(&(str[i]),j-i);
-                if(wid >= 0) 
-                    ret.push_back(LabeledEdge(i,j,wid));
-            }
+            std::vector<std::pair<int,WordId> > pref = this->map_.commonPrefix(base+i,T-i);
+            for(std::vector<std::pair<int,WordId> >::iterator it = pref.begin(); it != pref.end(); it++)
+                ret.push_back(LabeledEdge(i,i+it->first,it->second));
         }
         return ret;
     }

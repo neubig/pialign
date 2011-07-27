@@ -1034,7 +1034,7 @@ void PIAlign::train() {
 } 
 
 vector<int> phraseLengths(const StringWordSet & swm) {
-    vector<int> ret(swm.size());
+    vector<int> ret(swm.maxId());
     for(unsigned i = 0; i < ret.size(); i++) {
         ret[i] = swm.getSymbolLength(i);
     }
@@ -1047,7 +1047,7 @@ void PIAlign::trim() {
     //  so we can delete only appropriate phrases
     bool remNull = model_->getRememberNull(); model_->setRememberNull(true);
     for(PairWordSet::iterator it = jointPhrases_.begin(); it != jointPhrases_.end(); it++) {
-        PRINT_DEBUG("model_->calcGenProb("<<it->second<<",Span(0,"<<eLens[it->first.first]<<",0,"<<fLens[it->first.second]<<")) == "<<model_->calcGenProb(it->second,Span(0,eLens[it->first.first],0,fLens[it->first.second]))<<endl);
+        PRINT_DEBUG("model_->calcGenProb("<<it->second<<",<"<<it->first.first<<","<<it->first.second<<"> Span(0,"<<eLens[it->first.first]<<",0,"<<fLens[it->first.second]<<")) == "<<model_->calcGenProb(it->second,Span(0,eLens[it->first.first],0,fLens[it->first.second]))<<endl);
         if(model_->calcGenProb(it->second,Span(0,eLens[it->first.first],0,fLens[it->first.second])) > NEG_INFINITY) {
             eActive[it->first.first]++; fActive[it->first.second]++;
         }
