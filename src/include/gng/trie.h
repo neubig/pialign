@@ -97,8 +97,6 @@ public:
         if(i < len_) {
             std::vector< std::pair< Key, TrieNode* > > oldChildren = children_;
             children_.clear();
-            std::vector< std::pair< Key, TrieNode* > > newChildren(1);
-            newChildren[0].first = str_[i];
             std::pair<Key,TrieNode*> * child = addChild(str_[i]);
             child->second = new TrieNode(str_+i+1,len_-i-1,val_,oldChildren);
             // intentionally do not free the string for speed
