@@ -6,7 +6,7 @@ using namespace std;
 void BaseModelOne::combineBases(const WordString & e, const WordString & f, std::vector<Prob> & probs) const {
     int I = e.length(), J = f.length()+1, myMax = I*J*(maxLen_+1);
     if((int)probs.size() < myMax) probs.resize(myMax);
-    fill(probs.begin(),probs.end(),0);
+    fill(probs.begin(),probs.begin()+myMax,0);
     for(int i = 0; i < I; i++) {
         Prob* base = &probs[i*J*(maxLen_+1)+J];
         int myE = e[i];
