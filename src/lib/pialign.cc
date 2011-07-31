@@ -888,7 +888,7 @@ void PIAlign::train() {
             // remove the samples in the current batch and count the words
             timeval tStart, tRemove;
             gettimeofday(&tStart, NULL);
-            for(int i = 0; i < myBatch; i++) {
+            for(int i = myBatch-1; i >= 0; i--) {
                 int s = sentOrder[beginSent+i];
                 int el = eCorpus_[s].length(), fl = fCorpus_[s].length();
                 jd.words += el+fl;
@@ -948,10 +948,13 @@ void PIAlign::train() {
                 jd.accepted += myBatch;
                 jd.likelihood += tNew;
             } else {
-                for(int i = 0; i < myBatch; i++) {
-                    int s = sentOrder[beginSent+i];
+                for(int i = myBatch-1; i >= 0; i--) {
                     PRINT_DEBUG("---- rejecting removing "<<s<<" ----"<<endl);
                     SpanNode * node = model_->removeSentence(newNodes[i], base_); delete node;
+                    delete newNodes[i];
+                }
+                for(int i = 0; i < myBatch; i++) {
+                    int s = sentOrder[beginSent+i];
                     PRINT_DEBUG("---- rejecting adding "<<s<<" ----"<<endl);
                     // this dies frequently, so catch the error and at least print the tree
                     try {
@@ -960,13 +963,10 @@ void PIAlign::train() {
                         cerr << endl << "Died when re-adding sentence." << endl;
                         cerr << " Original sentence (to be re-added):" << endl;
                         printSample(eCorpus_[s],fCorpus_[s],oldNodes[i],cerr,true);
-                        cerr << endl << " Rejected sentence:" << endl;
-                        printSample(eCorpus_[s],fCorpus_[s],newNodes[i],cerr,true);
                         cerr << endl << "At rejection tn="<<tNew<<", to="<<tOld<<", pn="<<jd.newProp<<" ("<<jd.newProp+jd.chartProb<<"), po="<<jd.oldProp<<" ("<<jd.oldProp+jd.chartProb<<") == "<<accept<<": "<<(isAccepted?"accept":"REJECT")<<endl;
                         throw e;
                     }
                     delete oldNodes[i];
-                    delete newNodes[i];
                 }
                 jd.likelihood += tOld;
             }
