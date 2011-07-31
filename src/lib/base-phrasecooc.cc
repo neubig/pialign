@@ -107,7 +107,7 @@ void BasePhraseCooc::trainCooc(Corpus & es, const WordSymbolSet & eVocab, Corpus
         }
     }
     // normalize probabilities and remove low probability values
-    cerr << "Normalizing probabilities " << endl;
+    cerr << "Normalizing "<<jProbs_.size()<<" probabilities " << endl;
     for(PairProbMap::iterator it = jProbs_.begin(); it != jProbs_.end(); it++)
         it->second = log(it->second/sum);
 }
