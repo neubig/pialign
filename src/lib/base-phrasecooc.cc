@@ -82,25 +82,27 @@ void BasePhraseCooc::trainCooc(Corpus & es, const WordSymbolSet & eVocab, Corpus
         }
         for(Counter<int,int>::const_iterator cit = myCounts.begin(); cit != myCounts.end(); cit++) {
             if(cit->second > coocDisc) {
-                if(eIds[i] == -1) eIds[i] = eSymbols_.getId(eStrs[i],true);
-                if(fIds[cit->first] == -1) fIds[cit->first] = fSymbols_.getId(fStrs[cit->first],true);
-                int eCount = eSents[i].size(), fCount = fSents[cit->first].size(), efCount = cit->second;
-                double eProb = (eCount-coocDisc)/es.size(), fProb = (fCount-coocDisc)/es.size(), efProb = (efCount-coocDisc)/es.size();
-                double geomMean = efProb/eProb*efProb/fProb;
-                sum += geomMean;
-                jProbs_.insert(PairProbMap::value_type(pair<WordId,WordId>(eIds[i],fIds[cit->first]),geomMean));
+                double eCount = eSents[i].size()-coocDisc, fCount = fSents[cit->first].size()-coocDisc, efCount = cit->second-coocDisc;
+                double eProb = efCount/fCount, fProb = efCount/eCount;
+                if(eProb >= condCutoff_ && fProb >= condCutoff_) {
+                    double geomMean = eProb*fProb;
+                    sum += geomMean;
+                    if(eIds[i] == -1) eIds[i] = eSymbols_.getId(eStrs[i],true);
+                    if(fIds[cit->first] == -1) fIds[cit->first] = fSymbols_.getId(fStrs[cit->first],true);
+                    jProbs_.insert(PairProbMap::value_type(pair<WordId,WordId>(eIds[i],fIds[cit->first]),geomMean));
 
-                // // ---- print ----
-                // for(unsigned j = 0; j < eStrs[i].length(); j++) {
-                //     if(j != 0) cout << " ";
-                //     cout << eVocab.getSymbol(eStrs[i][j]);
-                // }
-                // cout << "\t";
-                // for(unsigned j = 0; j < fStrs[cit->first].length(); j++) {
-                //     if(j != 0) cout << " ";
-                //     cout <<fVocab.getSymbol(fStrs[cit->first][j]-eVocab.size());
-                // }
-                // cout << "\t"<<efCount<<"\t"<<eCount<<"\t"<<fCount<<endl;
+                    // // ---- print ----
+                    // for(unsigned j = 0; j < eStrs[i].length(); j++) {
+                    //     if(j != 0) cout << " ";
+                    //     cout << eVocab.getSymbol(eStrs[i][j]);
+                    // }
+                    // cout << "\t";
+                    // for(unsigned j = 0; j < fStrs[cit->first].length(); j++) {
+                    //     if(j != 0) cout << " ";
+                    //     cout <<fVocab.getSymbol(fStrs[cit->first][j]-eVocab.size());
+                    // }
+                    // cout << "\t"<<efCount<<"\t"<<eCount<<"\t"<<fCount<<endl;
+                }
             }
         }
     }

@@ -65,7 +65,6 @@ cerr << " A tool for unsupervised Bayesian alignment using phrase-based ITGs" <<
 << "               'uni'=simple unigrams, 'coocll'=log-linear interpolation of phrase" << endl
 << "               cooccurrence probabilities in both directions (default 'm1g')" << endl
 << " -coocdisc     How much to discount the cooccurrence for phrasal base measures" << endl
-<< " -cooccut      Cut off coocurrence probabilities at this level" << endl
 << " -defstren     Fixed strength of the PY process (default none)" << endl
 << " -defdisc      Fixed discount of the PY process (default none)" << endl
 << " -nullprob     The probability of a null alignment (default 0.01)" << endl
@@ -287,8 +286,19 @@ void PIAlign::initialize() {
     // --------------- train the base model ---------------------
     // make the model one probabilities and logify if necessary
     if(baseType_ == BASE_MODEL1 || baseType_ == BASE_MODEL1G || baseType_ == BASE_PHRASECOOC_LL) {
-        // train model one
         BaseModelOne * model1 = new BaseModelOne();
+        // if necessary, train the phrase model and make it a compound
+        if(baseType_ == BASE_PHRASECOOC_LL) {
+            BasePhraseCooc * cooc = new BasePhraseCooc();
+            cooc->trainCooc(eCorpus_, eVocab_, fCorpus_, fVocab_, coocDisc_);
+            BaseCompound * comp = new BaseCompound();
+            comp->addMeasure(cooc);
+            comp->addMeasure(model1);
+            base_ = comp;
+        } else {
+            base_ = model1;
+        }
+        // train model one
         if(le2fFile_)
             model1->loadModelOne(le2fFile_,eVocab_,fVocab_,true);
         else
@@ -299,17 +309,6 @@ void PIAlign::initialize() {
             model1->trainModelOne(fCorpus_, eCorpus_, fVocab_.size(), eVocab_.size(), maxSentLen_);
         if(baseType_ == BASE_MODEL1G)
             model1->setGeometric(true);
-        // if necessary, train the phrase model and make it a compound
-        if(baseType_ == BASE_PHRASECOOC_LL) {
-            BasePhraseCooc * cooc = new BasePhraseCooc();
-            cooc->trainCooc(eCorpus_, eVocab_, fCorpus_, fVocab_, coocDisc_);
-            BaseCompound * comp = new BaseCompound();
-            comp->addMeasure(model1);
-            comp->addMeasure(cooc);
-            base_ = comp;
-        } else {
-            base_ = model1;
-        }
     }
     // train a unigram model
     else

@@ -14,10 +14,11 @@ protected:
     typedef std::vector< std::pair<int,int> > SuffixArray;
     StringWordSet eSymbols_, fSymbols_;
     PairProbMap jProbs_;
+    Prob condCutoff_;
 
 public:
 
-    BasePhraseCooc() : BaseMeasure() { }
+    BasePhraseCooc() : BaseMeasure(), condCutoff_(0.1) { }
 
     void substringMatrix(Corpus & corp, const WordSymbolSet & vocab, int boost, std::vector<WordString> & subs, std::vector< std::set<int> > & sents, Prob coocDisc);
 
@@ -25,6 +26,8 @@ public:
 
     SpanProbMap * getBaseChart(const WordString & e, const WordString & f) const;
 
+    void setCondCutoff(Prob v) { condCutoff_ = v; }
+    Prob getCondCutoff() { return condCutoff_; }
 
 };
 
