@@ -16,6 +16,12 @@ protected:
 
 public:
 
+    virtual ~SpanProbElements() {
+        for(unsigned i = 0; i < maps_.size(); i++)
+            if(maps_[i])
+                delete maps_[i];
+    }
+
     void addMap(SpanProbMap* myChart, Prob myProb) {
         maps_.push_back(myChart);
         for(SpanProbMap::const_iterator it = myChart->begin(); it != myChart->end(); it++) {
