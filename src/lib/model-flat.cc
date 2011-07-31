@@ -18,8 +18,8 @@ Prob FlatModel::addSentence(const WordString & e, const WordString & f, SpanNode
         // find the phrase ID
         const Span & mySpan = node->span;
         int s=mySpan.es,t=mySpan.ee,u=mySpan.fs,v=mySpan.fe;
-        WordId eId = ePhrases.getId(&e[s],t-s,true),
-            fId = fPhrases.getId(&f[u],v-u,true);
+        WordId eId = ePhrases.getId(e.substr(s,t-s),true),
+            fId = fPhrases.getId(f.substr(u,v-u),true);
         // set the phrase and the pair
         node->phraseid = pairs.getId(std::pair<WordId,WordId>(eId,fId),true);
         if(node->baseProb != 0) {

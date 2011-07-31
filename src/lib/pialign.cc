@@ -322,7 +322,8 @@ void PIAlign::initialize() {
 
 // get the ID of a phrase
 WordId getPhraseId(const WordString & str, StringWordSet & phrases, bool add) {
-    return phrases.getId(&str[0],str.length(),add);
+    // return phrases.getId(&str[0],str.length(),add);
+    return phrases.getId(str,add);
 }
 WordId getPhraseId(WordId eId, WordId fId, PairWordSet & phrases, bool add) {
     pair<WordId,WordId> myPair(eId,fId);
@@ -742,8 +743,8 @@ void PIAlign::printPhraseTable(ostream & ptos) {
     model_->calcPhraseTable(jointPhrases_,eProbs,fProbs,jProbs,dProbs);
     double phrasePen = exp(1);
     for(PairWordSet::const_iterator it = jointPhrases_.begin(); it != jointPhrases_.end(); it++) {
-        WordString estr(ePhrases_.getSymbol(it->first.first),ePhrases_.getSymbolLength(it->first.first));
-        WordString fstr(fPhrases_.getSymbol(it->first.second),fPhrases_.getSymbolLength(it->first.second));
+        const WordString & estr = ePhrases_.getSymbol(it->first.first);
+        const WordString & fstr = fPhrases_.getSymbol(it->first.second);
         if(it->second < (int)jProbs.size() && jProbs[it->second] != 0) {
             if((int)estr.length() <= printMax_ && (int)fstr.length() <= printMax_ 
                 && (int)estr.length() >= printMin_ && (int)fstr.length() >= printMin_) {
@@ -815,8 +816,8 @@ void PIAlign::buildSpans(SpanNode* node) {
         node->span.fe = node->left->span.fe + node->right->span.fe;
     } else {
         pair<WordId,WordId> pair = jointPhrases_.getSymbol(node->phraseid);
-        node->span.ee = ePhrases_.getSymbolLength(pair.first);
-        node->span.fe = fPhrases_.getSymbolLength(pair.second);
+        node->span.ee = ePhrases_.getSymbol(pair.first).length();
+        node->span.fe = fPhrases_.getSymbol(pair.second).length();
     }
     // cerr << " build: s="<<node->span<<", i="<<node->phraseid<<", t="<<node->type<<", p="<<node->prob<<", b="<<node->baseProb<<", a="<<node->add<<endl;
 }
@@ -1034,9 +1035,9 @@ void PIAlign::train() {
 } 
 
 vector<int> phraseLengths(const StringWordSet & swm) {
-    vector<int> ret(swm.maxId());
+    vector<int> ret(swm.size());
     for(unsigned i = 0; i < ret.size(); i++) {
-        ret[i] = swm.getSymbolLength(i);
+        ret[i] = swm.getSymbol(i).length();
     }
     return ret;
 }

@@ -82,8 +82,8 @@ void BasePhraseCooc::trainCooc(Corpus & es, const WordSymbolSet & eVocab, Corpus
         }
         for(Counter<int,int>::const_iterator cit = myCounts.begin(); cit != myCounts.end(); cit++) {
             if(cit->second > coocDisc) {
-                if(eIds[i] == -1) eIds[i] = eSymbols_.getId(&eStrs[i][0],eStrs[i].length(),true);
-                if(fIds[cit->first] == -1) fIds[cit->first] = fSymbols_.getId(&fStrs[cit->first][0],fStrs[cit->first].length(),true);
+                if(eIds[i] == -1) eIds[i] = eSymbols_.getId(eStrs[i],true);
+                if(fIds[cit->first] == -1) fIds[cit->first] = fSymbols_.getId(fStrs[cit->first],true);
                 int eCount = eSents[i].size(), fCount = fSents[cit->first].size(), efCount = cit->second;
                 double eProb = (eCount-coocDisc)/es.size(), fProb = (fCount-coocDisc)/es.size(), efProb = (efCount-coocDisc)/es.size();
                 double geomMean = efProb/eProb*efProb/fProb;

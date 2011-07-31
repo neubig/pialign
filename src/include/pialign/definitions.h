@@ -184,6 +184,10 @@ inline bool operator==(const WordString & a, const WordString & b) {
     return true;
 }
 
+class WordStringHash {
+public:
+    size_t operator() (const WordString & str) const { return str.getHash(); }
+};
 
 typedef gng::SymbolSet< std::string, WordId > WordSymbolSet;
 typedef gng::SymbolSet< std::pair<WordId, WordId>, WordId, PairHash<WordId> > PairWordSet;
@@ -196,19 +200,22 @@ typedef std::pair<Prob, Span> ProbSpan;
 typedef std::vector< ProbSpan > ProbSpanVec;
 
 
-class StringWordSet : public gng::SymbolTrie< WordId, WordId > {
+class StringWordSet : public gng::SymbolSet< WordString, WordId, WordStringHash > {
 
 public:
       
     // find all active phrases in a string
     std::vector<LabeledEdge> findEdges(const WordString & str, int maxLen) const {
-        int T = str.length();
-        std::vector<LabeledEdge> ret;
-        const WordId* base = &str[0];
+        int T = str.length(), jLim;
+        std::vector<LabeledEdge> ret;    
         for(int i = 0; i <= T; i++) {
-            std::vector<std::pair<int,WordId> > pref = this->map_.commonPrefix(base+i,T-i);
-            for(std::vector<std::pair<int,WordId> >::iterator it = pref.begin(); it != pref.end(); it++)
-                ret.push_back(LabeledEdge(i,i+it->first,it->second));
+            jLim = std::min(i+maxLen,T);
+            for(int j = i; j <= jLim; j++) {
+                // WordId wid = this->getId(&(str[i]),j-i);
+                WordId wid = this->getId(str.substr(i,j-i));
+                if(wid >= 0) 
+                    ret.push_back(LabeledEdge(i,j,wid));
+            }
         }
         return ret;
     }
