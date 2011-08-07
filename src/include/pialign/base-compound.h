@@ -113,16 +113,20 @@ public:
     }
     
     void remove(Span & span, WordId pid, Prob baseProb, const std::vector<Prob> & baseElems) {
-        if(baseElems.size() == 0) THROW_ERROR("baseElems.size() == 0 for remove word "<<pid);
-        std::vector<Prob> myProbs = baseElems;
-        Prob str = dist_.getStrength(); dist_.setStrength(0);
-        for(unsigned i = 0; i < myProbs.size(); i++)
-            myProbs[i] += log(dist_.getProb(i));
-        normalizeLogProbs(myProbs);
-        int ans = discreteSample(myProbs,1.0);
-        dist_.remove(ans);
-        dist_.setStrength(str);
-        PRINT_DEBUG("Removed "<<ans<<", probability "<<dist_.getProb(ans)<<std::endl);
+        int ans;
+        if(baseElems.size() == 0) {
+            std::cerr << "baseElems.size() == 0 for remove word "<<pid<<", skipping"<<std::endl;
+        } else {
+            std::vector<Prob> myProbs = baseElems;
+            Prob str = dist_.getStrength(); dist_.setStrength(0);
+            for(unsigned i = 0; i < myProbs.size(); i++)
+                myProbs[i] += log(dist_.getProb(i));
+            normalizeLogProbs(myProbs);
+            ans = discreteSample(myProbs,1.0);
+            dist_.remove(ans);
+            dist_.setStrength(str);
+            PRINT_DEBUG("Removed "<<ans<<", probability "<<dist_.getProb(ans)<<std::endl);
+        }
     }
 
 };
