@@ -577,6 +577,8 @@ pair<SpanNode*,Prob> PIAlign::sampleTree(int sent, const Span & mySpan, const Pa
             PRINT_DEBUG(" sampleTree("<<mySpan<<") == (NONE): s="<<actNode->span<<", i="<<actNode->phraseid<<", t="<<actNode->type<<", p="<<actNode->prob<<", b="<<actNode->baseProb<<", a="<<actNode->add<<endl);
             return pair<SpanNode*,Prob>(0,NEG_INFINITY);
         }
+        if(normProbs.size() == 0) 
+            throw std::runtime_error("normProbs.size() == 0 @ sampling first ans");
         ans = discreteSample(normProbs,1.0);
         if(probs[ans] <= NEG_INFINITY)
             throw std::runtime_error("Picked 0 probability");
@@ -606,6 +608,8 @@ pair<SpanNode*,Prob> PIAlign::sampleTree(int sent, const Span & mySpan, const Pa
             return pair<SpanNode*,Prob>(myNode,ansProb);
         // continue sampling
         add = false;
+        if(normProbs.size() == 2)
+            throw std::runtime_error("normProbs.size() == 2 @ sampling second ans");
         ans = discreteSample(&normProbs[2],normProbs.size()-2)+2;
         if(probs[ans] <= NEG_INFINITY)
             throw std::runtime_error("Picked 0 probability");

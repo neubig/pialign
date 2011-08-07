@@ -121,6 +121,7 @@ void BaseModelOne::trainModelOne(const Corpus & es, const Corpus & fs, int eSize
         }
     }
     // train the model
+    int maxIters = 100;
     Prob lastLik = 0.0, likCut = 0.001, sTotal, lik = 0.0, norm;
     do {
         // reset the values
@@ -158,7 +159,7 @@ void BaseModelOne::trainModelOne(const Corpus & es, const Corpus & fs, int eSize
         for(PairProbMap::iterator it = count.begin(); it != count.end(); it++)
             conds_[it->first] = it->second/total[it->first.second];
         std::cerr << " Iteration " << ++iter << ": likelihood "<<lik<<std::endl;
-    } while(lastLik == 0.0 || (lastLik-lik) < lik * likCut);
+    } while((lastLik == 0.0 || (lastLik-lik) < lik * likCut) && --maxIters > 0);
 }
 
 // calculate the model one probability of P(e|f)

@@ -6,17 +6,17 @@
 #include <vector>
 
 inline int discreteSample(const double* vec, int size, double sum = -1) {
+    if(size <= 0) throw std::runtime_error("Bad size-zero discrete sample");
     if(sum < 0) {
         sum = 0;
         for(int i = 0; i < size; i++)
             sum += vec[i];
     }
     sum *= (double)rand()/RAND_MAX;
-    for(int i = 0; i < size; i++) {
-        if((sum -= vec[i]) < 0)
-            return i;
-    }
-    throw std::runtime_error("Couldn't find value after sampling");
+    size -= 1; 
+    int i = 0;
+    for( ; i < size && ((sum -= vec[i]) > 0); i++);
+    return i;
 }
 
 inline int discreteSample(const std::vector<double> & vec, double sum = -1) {
