@@ -102,14 +102,17 @@ public:
         baseElems_[pid] = baseElems;
         // find which part to add it to
         std::vector<Prob> myProbs = baseElems;
-        if(baseElems.size() == 0) THROW_ERROR("baseElems.size() == 0 for add word "<<pid);
-        PRINT_DEBUG("baseElems.size() == " <<baseElems.size()<<std::endl);
-        for(unsigned i = 0; i < myProbs.size(); i++)
-            myProbs[i] += log(dist_.getProb(i));
-        normalizeLogProbs(myProbs);
-        int ans = discreteSample(myProbs,1.0);
-        dist_.add(ans);
-        PRINT_DEBUG("Added "<<ans<<", probability "<<dist_.getProb(ans)<<std::endl);
+        if(baseElems.size() == 0) 
+            std::cerr << "baseElems.size() == 0 for add word "<<pid << std::endl;
+        else {
+            PRINT_DEBUG("baseElems.size() == " <<baseElems.size()<<std::endl);
+            for(unsigned i = 0; i < myProbs.size(); i++)
+                myProbs[i] += log(dist_.getProb(i));
+            normalizeLogProbs(myProbs);
+            int ans = discreteSample(myProbs,1.0);
+            dist_.add(ans);
+            PRINT_DEBUG("Added "<<ans<<", probability "<<dist_.getProb(ans)<<std::endl);
+        }
     }
     
     void remove(Span & span, WordId pid, Prob baseProb, const std::vector<Prob> & baseElems) {
