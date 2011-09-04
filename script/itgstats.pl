@@ -105,7 +105,7 @@ sub buildtree {
     my ($lf,$le) = split(/ \|\|\| /,$l->[5]);
     my ($rf,$re) = split(/ \|\|\| /,$r->[5]);
     my $t = (($s eq '[')?1:-1);
-    my $phrase = $lf.(($lf and $rf)?" ":"").$rf." ||| ".($t==1?$le:$re).(($le and $re)?" ":"").($t==1?$re:$le);
+    my $phrase = $lf.((length($lf) and length($rf))?" ":"").$rf." ||| ".($t==1?$le:$re).((length($le) and length($re))?" ":"").($t==1?$re:$le);
     my $ret =  [ $t, -1, -1, $l->[3]+$r->[3], $l->[4]+$r->[4], $phrase, $l, $r ];
     # throw away children if this is to be merged
     if($inphrase and ($MERGE or ($BLOCK and (min($ret->[3],$ret->[4]) <= 1)) or max($ret->[3],$ret->[4]) == 1)) {
