@@ -74,6 +74,7 @@ cerr << " A tool for unsupervised Bayesian alignment using phrase-based ITGs" <<
 #ifdef MONOTONIC_ON
 << " -monotonic    Do not allow reordering" << endl
 #endif
+<< " -noreject     Skip the Metropolis-Hastings step" << endl
 << "" << endl
 << "~~~ Phrase Table ~~~" << endl
 << "" << endl
@@ -123,6 +124,7 @@ void PIAlign::loadConfig(int argc, const char** argv) {
             else if(!strcmp(argv[i],"-noword"))         forceWord_ = false;
             else if(!strcmp(argv[i],"-noremnull"))      rememberNull = false;
             else if(!strcmp(argv[i],"-monotonic"))      monotonic_ = true;
+            else if(!strcmp(argv[i],"-noreject"))       doReject_ = false;
             else if(!strcmp(argv[i],"-babysteps"))      babySteps_ = atoi(argv[++i]);
             else if(!strcmp(argv[i],"-babysteplen"))    babyStepLen_ = atoi(argv[++i]);
             else if(!strcmp(argv[i],"-annealsteps"))    annealSteps_ = atoi(argv[++i]);
@@ -938,7 +940,7 @@ void PIAlign::train() {
 
             // do rejection step
             Prob accept = tOld ? tNew - tOld - jd.newProp + jd.oldProp : 0;
-            bool isAccepted = (accept < 0 ? bernoulliSample(exp(accept)) : true);
+            bool isAccepted = !doReject_ || (accept < 0 ? bernoulliSample(exp(accept)) : true);
             if(isAccepted) {
                 PRINT_DEBUG("---- accepting ----"<<endl);
                 for(int i = 0; i < myBatch; i++) {

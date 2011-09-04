@@ -128,6 +128,7 @@ protected:
     static const int BASE_MODEL1G = 2;
     static const int BASE_PHRASECOOC_LL = 3;
     bool monotonic_;          // disable inversions
+    bool doReject_;           // whether or not to do MH
     Prob coocDisc_;           // the amount to discount the coocurrence
 
     // input/output parameters
@@ -178,7 +179,8 @@ public:
         modelType_(MODEL_HIER), forceWord_(true), avgPhraseLen_(0.01), nullProb_(0.01), 
         termStrength_(1), termPrior_(1.0/3.0),
         defDisc_(-1), defStren_(-1),
-        baseType_(BASE_MODEL1G), monotonic_(false), coocDisc_(1.0), 
+        baseType_(BASE_MODEL1G), monotonic_(false), doReject_(true),
+        coocDisc_(1.0), 
         eFile_(0), fFile_(0), prefix_(0), le2fFile_(0), 
         lf2eFile_(0), patternBuffer_(3),
         base_(0), model_(0), derivations_()
