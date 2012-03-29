@@ -77,7 +77,7 @@ inline double gammaSample(double a, double scale) {
         e = exponSample(1);
         x = e*x/(x+y);
     }
-    return x * scale;
+    return x / scale;
 }
 inline double betaSample(double a, double b) {
     double ga = gammaSample(a,1);
