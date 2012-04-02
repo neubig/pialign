@@ -74,7 +74,7 @@ cerr << " A tool for unsupervised Bayesian alignment using phrase-based ITGs" <<
 #ifdef MONOTONIC_ON
 << " -monotonic    Do not allow reordering" << endl
 #endif
-<< " -noreject     Skip the Metropolis-Hastings step" << endl
+<< " -domh         Do a Metropolis-Hastings rejection step" << endl
 << "" << endl
 << "~~~ Phrase Table ~~~" << endl
 << "" << endl
@@ -87,7 +87,7 @@ cerr << " A tool for unsupervised Bayesian alignment using phrase-based ITGs" <<
 << "~~~ Inference Parameters ~~~" << endl
 << "" << endl
 << " -burnin       The number of burn-in iterations (default 9)" << endl
-<< " -probwidth    The width of the probability beam to use (default 1e-10)" << endl
+<< " -probwidth    The width of the probability beam to use (default 1e-4)" << endl
 << " -noqueue      Use exhaustive search instead of queue-based parsing" << endl
 << " -lookahead    The type of lookahead function to use:" << endl
 << "               'none'=no look-ahead, 'ind'=independently calculate both sides" << endl
@@ -124,7 +124,7 @@ void PIAlign::loadConfig(int argc, const char** argv) {
             else if(!strcmp(argv[i],"-noword"))         forceWord_ = false;
             else if(!strcmp(argv[i],"-noremnull"))      rememberNull = false;
             else if(!strcmp(argv[i],"-monotonic"))      monotonic_ = true;
-            else if(!strcmp(argv[i],"-noreject"))       doReject_ = false;
+            else if(!strcmp(argv[i],"-domh"))           doReject_ = true;
             else if(!strcmp(argv[i],"-babysteps"))      babySteps_ = atoi(argv[++i]);
             else if(!strcmp(argv[i],"-babysteplen"))    babyStepLen_ = atoi(argv[++i]);
             else if(!strcmp(argv[i],"-annealsteps"))    annealSteps_ = atoi(argv[++i]);
