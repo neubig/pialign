@@ -52,25 +52,27 @@ cerr << " A tool for unsupervised Bayesian alignment using phrase-based ITGs" <<
 << "Other input:" << endl
 << " -le2f         A file containing the lexicon probabilities for e2f" << endl
 << " -lf2e         A file containing the lexicon probabilities for f2e" << endl
-<< "               (These can be used with \"-base m1\" or \"-base m1g\" but are not necessary)" << endl
+<< "               (These can be used with \"-base m1\" or \"-base m1g\" but are not" << endl
+<< "               necessary)" << endl
 << "" << endl
 << "~~~ Model Parameters ~~~" << endl
 << "" << endl
 << " -model        Model type (hier/len/flat, default: hier)" << endl
 << "" << endl
 << " -avgphraselen A parameter indicating the expected length of a phrase." << endl
-<< "               default is small (0.01) to prevent overly long alignments" << endl
-<< " -base         The type of base measure to use (m1g is generally best)." << endl
-<< "               'm1g'=geometric mean of model 1, 'm1'=arithmetic mean of model 1," << endl
-<< "               'uni'=simple unigrams, 'coocll'=log-linear interpolation of phrase" << endl
-<< "               cooccurrence probabilities in both directions (default 'm1g')" << endl
-<< " -coocdisc     How much to discount the cooccurrence for phrasal base measures" << endl
-<< " -defstren     Fixed strength of the PY process (default none)" << endl
-<< " -defdisc      Fixed discount of the PY process (default none)" << endl
-<< " -nullprob     The probability of a null alignment (default 0.01)" << endl
+<< "               def. is small (0.01) to prevent overly long alignments" << endl
+<< " -base         The type of base measure to use." << endl
+<< "               'm1g'=geometric mean of model 1 (default)" << endl
+<< "               'm1'=arithmetic mean of model 1" << endl
+<< "               'uni'=simple unigrams" << endl
+<< "               'coocll'=log-linear interpolation of phrase cooccurrence probs" << endl
+<< " -coocdisc     How much to discount for -base coocll (def. 1.0)" << endl
+<< " -defstren     Fixed strength of the PY process (def. none)" << endl
+<< " -defdisc      Fixed discount of the PY process (def. none)" << endl
+<< " -nullprob     The probability of a null alignment (def. 0.01)" << endl
 << " -noremnull    Do not remember nulls in the phrase table" << endl
 << " -termprior    The prior probability of generating a terminal (0.33)" << endl
-<< " -termstren    Strength of the type distribution (default 1)" << endl
+<< " -termstren    Strength of the type distribution (def. 1)" << endl
 #ifdef MONOTONIC_ON
 << " -monotonic    Do not allow reordering" << endl
 #endif
@@ -78,24 +80,25 @@ cerr << " A tool for unsupervised Bayesian alignment using phrase-based ITGs" <<
 << "" << endl
 << "~~~ Phrase Table ~~~" << endl
 << "" << endl
-<< " -maxphraselen The maximum length of a minimal phrase (default 7)" << endl
-<< " -maxsentlen   The maximum length of sentences to use (default 40)" << endl
-<< " -printmax     The maximum length of phrases included in the phrase table (default 7)" << endl
-<< " -printmin     The minimal length of phrases included in the phrase table (default 1)" << endl
-<< " -noword       Output only phrase alignments (do not force output of word alignments)" << endl
+<< " -maxphraselen Maximum length of a minimal phrase (def. 7)" << endl
+<< " -maxsentlen   Maximum length of sentences to use (def. 40)" << endl
+<< " -printmax     Maximum length of phrases included in the phrase table (def. 7)" << endl
+<< " -printmin     Minimal length of phrases included in the phrase table (def. 1)" << endl
+<< " -noword       Do not force output of word alignments" << endl
 << "" << endl
 << "~~~ Inference Parameters ~~~" << endl
 << "" << endl
-<< " -burnin       The number of burn-in iterations (default 9)" << endl
-<< " -probwidth    The width of the probability beam to use (default 1e-4)" << endl
+<< " -burnin       The number of burn-in iterations (def. 9)" << endl
+<< " -probwidth    The width of the probability beam to use (def. 1e-4)" << endl
 << " -noqueue      Use exhaustive search instead of queue-based parsing" << endl
 << " -lookahead    The type of lookahead function to use:" << endl
-<< "               'none'=no look-ahead, 'ind'=independently calculate both sides" << endl
-<< " -samps        The number of samples to take (default 1)" << endl
-<< " -samprate     Take samples every samprate turns (default 1)" << endl
-<< " -worditers    The number of iterations to perform with a word-based model (default 0)" << endl
+<< "               'none'=no look-ahead" << endl
+<< "               'ind'=independently calculate both sides (default)" << endl
+<< " -samps        The number of samples to take (def. 1)" << endl
+<< " -samprate     Take samples every samprate turns (def. 1)" << endl
+<< " -worditers    Number of iterations to perform with word-based model (def. 0)" << endl
 << " -noshuffle    Don't shuffle the order of the sentences" << endl
-<< " -batchlen     The number of sentences to process in a single batch" << endl
+<< " -batchlen     The number of sentences to process in a single batch (def. 1)" << endl
 << " -threads      The number of threads to use (must be <= -batchlen)" << endl << endl;
     if(err)
         cerr << endl << "Error: " << err << endl;
