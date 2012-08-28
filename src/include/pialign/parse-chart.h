@@ -45,7 +45,7 @@ public:
     void setUseQueue(bool useQueue) { useQueue_ = useQueue; }
 
     inline std::vector< std::pair<int,int> > & getQueue(std::vector< std::vector< std::pair<int,int> > > & myQueue, int ide, int idf) {
-        PRINT_DEBUG("getQueue("<<ide<<", "<<idf<<") == "<<ide*(fLen_+1)+idf<<std::endl);
+        PRINT_DEBUG("getQueue("<<ide<<", "<<idf<<") == "<<ide*(fLen_+1)+idf<<std::endl, 2);
         return myQueue[ide*(fLen_+1)+idf];
     }
     inline std::vector< std::pair<int,int> > & getTopLefts(int ide, int idf) { return getQueue(topLefts_,ide,idf); }
@@ -68,10 +68,10 @@ public:
             Span mySpan(s,t,u,v);
             agendas_[len-1].push_back(mySpan);
             if(useQueue_) {
-                PRINT_DEBUG("addToQueue(topLefts_,"<<t<<","<<v<<","<<s<<","<<u<<")"<<std::endl);
-                PRINT_DEBUG("addToQueue(botLefts_,"<<t<<","<<u<<","<<s<<","<<v<<")"<<std::endl);
-                PRINT_DEBUG("addToQueue(topRights_,"<<s<<","<<v<<","<<t<<","<<u<<")"<<std::endl);
-                PRINT_DEBUG("addToQueue(botRights_,"<<s<<","<<u<<","<<t<<","<<v<<")"<<std::endl);
+                PRINT_DEBUG("addToQueue(topLefts_,"<<t<<","<<v<<","<<s<<","<<u<<")"<<std::endl, 2);
+                PRINT_DEBUG("addToQueue(botLefts_,"<<t<<","<<u<<","<<s<<","<<v<<")"<<std::endl, 2);
+                PRINT_DEBUG("addToQueue(topRights_,"<<s<<","<<v<<","<<t<<","<<u<<")"<<std::endl, 2);
+                PRINT_DEBUG("addToQueue(botRights_,"<<s<<","<<u<<","<<t<<","<<v<<")"<<std::endl, 2);
                 addToQueue(topLefts_,t,v,s,u);
                 addToQueue(botLefts_,t,u,s,v);
                 addToQueue(topRights_,s,v,t,u);

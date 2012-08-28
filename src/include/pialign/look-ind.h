@@ -25,7 +25,7 @@ public:
     Prob getLookAhead(const Span & s) const {
        PRINT_DEBUG("min(eFor_[" << s.es << "]+eBack_["<<s.ee<<"], fFor_[" << s.fs << "]+fBack_["<<s.fe<<"]) == "<<
            " min("<<eFor_[s.es]<<"+"<<eBack_[s.ee]<<","<<fFor_[s.fs]<<"+"<<fBack_[s.fe]<<") == "<<
-           std::min(eFor_[s.es]+eBack_[s.ee],fFor_[s.fs]+fBack_[s.fe]) << std::endl);
+           std::min(eFor_[s.es]+eBack_[s.ee],fFor_[s.fs]+fBack_[s.fe]) << std::endl, 2);
         return std::min(eFor_[s.es]+eBack_[s.ee],fFor_[s.fs]+fBack_[s.fe]);
     }
     
@@ -51,11 +51,13 @@ public:
                     forward[end] = addLogProbs(forward[end],forward[start]+getSpan(start,end,len,buff));
         }
             
-        // // --- print ---
-        // PRINT_DEBUG("Forward:");
-        // for(int i = 0; i <= len; i++)
-        //     PRINT_DEBUG(" " << forward[i]);
-        // PRINT_DEBUG(std::endl);
+        // --- print ---
+        if(globalDebug_ >= 2) {
+            PRINT_DEBUG("Forward:", 2);
+            for(int i = 0; i <= len; i++)
+                PRINT_DEBUG(" " << forward[i], 2);
+            PRINT_DEBUG(std::endl, 2);
+        }
     }
     void addBackProbs(const std::vector<Prob> & buff, std::vector<Prob> & backward, int len, int maxLen) {
         std::fill(backward.begin(),backward.end(),NEG_INFINITY);
@@ -70,11 +72,13 @@ public:
                     backward[start] = addLogProbs(backward[start],backward[end]+getSpan(start,end,len,buff));
         }
 
-        // // --- print ---
-        // PRINT_DEBUG("Backward:");
-        // for(int i = 0; i <= len; i++)
-        //     PRINT_DEBUG(" " << backward[i]);
-        // PRINT_DEBUG(std::endl);
+        // --- print ---
+        if(globalDebug_ >= 2) {
+            PRINT_DEBUG("Backward:", 2);
+            for(int i = 0; i <= len; i++)
+                PRINT_DEBUG(" " << backward[i], 2);
+            PRINT_DEBUG(std::endl, 2);
+        }
     }
     
     void preCalculate(const WordString & e, const WordString & f, const SpanProbMap & base, const SpanProbMap & gen, const ParseChart & chart) {    
@@ -88,7 +92,7 @@ public:
         std::fill( fBuff_.begin(), fBuff_.begin()+(fSize*fSize), NEG_INFINITY );
         // make the buffers
         for(SpanProbMap::const_iterator it = base.begin(); it != base.end(); it++) {
-            PRINT_DEBUG("adding base "<<it->first<<", "<<it->second<<std::endl);
+            PRINT_DEBUG("adding base "<<it->first<<", "<<it->second<<std::endl, 2);
             Prob prob = chart.getFromChart(it->first);
             eMax = std::max(it->first.ee-it->first.es,eMax);
             fMax = std::max(it->first.fe-it->first.fs,fMax);
@@ -96,7 +100,7 @@ public:
             updateSpan(it->first.fs,it->first.fe,f.length(),prob,fBuff_);
         }
         for(SpanProbMap::const_iterator it = gen.begin(); it != gen.end(); it++) {
-            PRINT_DEBUG("adding gen "<<it->first<<", "<<it->second<<std::endl);
+            PRINT_DEBUG("adding gen "<<it->first<<", "<<it->second<<std::endl, 2);
             Prob prob = chart.getFromChart(it->first);
             eMax = std::max(it->first.ee-it->first.es,eMax);
             fMax = std::max(it->first.fe-it->first.fs,fMax);

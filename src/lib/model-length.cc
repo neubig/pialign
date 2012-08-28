@@ -37,11 +37,11 @@ Prob LengthModel::addSentence(const WordString & e, const WordString & f, SpanNo
         node->prob += addSentence(e,f,node->right,ePhrases,fPhrases,pairs,base);
         node->prob += addSentence(e,f,node->left, ePhrases,fPhrases,pairs,base);
         node->prob += sepSplits_[idx];
-        PRINT_DEBUG(" LengthModel::splitProb("<<idx<<"): "<<sepSplits_[idx]<<endl);
+        PRINT_DEBUG(" LengthModel::splitProb("<<idx<<"): "<<sepSplits_[idx]<<endl, 2);
     } else if(toAdd != TYPE_GEN) {
         base->add(node->span,node->phraseid,node->baseProb,node->baseElems);
         node->prob += node->baseProb;
-        PRINT_DEBUG(" LengthModel::baseProb("<<node->phraseid<<"): "<<node->baseProb<<endl);
+        PRINT_DEBUG(" LengthModel::baseProb("<<node->phraseid<<"): "<<node->baseProb<<endl, 2);
         toAdd = TYPE_TERM;
     }
     // find the left and right nodes
@@ -50,13 +50,13 @@ Prob LengthModel::addSentence(const WordString & e, const WordString & f, SpanNo
     // add the generative probability
     if(node->type == TYPE_GEN) {
         node->prob = log(sepPhrases_[idx].getProb(node->phraseid,0));
-        PRINT_DEBUG(" LengthModel::genProb("<<idx<<","<<node->phraseid<<"): "<<log(sepPhrases_[idx].getProb(node->phraseid,0))<<endl);
+        PRINT_DEBUG(" LengthModel::genProb("<<idx<<","<<node->phraseid<<"): "<<log(sepPhrases_[idx].getProb(node->phraseid,0))<<endl, 2);
         sepPhrases_[idx].addExisting(node->phraseid);
     } else {
         node->prob += log(sepPhrases_[idx].getFallbackProb());
-        PRINT_DEBUG(" LengthModel::fallProb("<<idx<<"): "<<log(sepPhrases_[idx].getFallbackProb())<<endl);
+        PRINT_DEBUG(" LengthModel::fallProb("<<idx<<"): "<<log(sepPhrases_[idx].getFallbackProb())<<endl, 2);
         Prob addProb = addType(toAdd,idx);
-        PRINT_DEBUG(" LengthModel::addProb("<<idx<<","<<toAdd<<"):"<<addProb<<endl);
+        PRINT_DEBUG(" LengthModel::addProb("<<idx<<","<<toAdd<<"):"<<addProb<<endl, 2);
         node->prob += addProb;
         sepPhrases_[idx].addNew(node->phraseid,lId,rId,toAdd);
     }

@@ -5,14 +5,14 @@ using namespace pialign;
 using namespace std;
 
 inline void setQueue(vector< vector< pair<int,int> > > & queue, int size) {
-    PRINT_DEBUG("Making queue of size "<<size<<endl);
+    PRINT_DEBUG("Making queue of size "<<size<<endl, 2);
     if((int)queue.size() <= size) queue.resize(size);
     fill(queue.begin(), queue.begin()+size, vector< pair<int,int> >());
 
 }
 
 void ParseChart::initialize(int eLen, int fLen) {
-    PRINT_DEBUG("Initialize: "<<eLen<<","<<fLen<<endl);
+    PRINT_DEBUG("Initialize: "<<eLen<<","<<fLen<<endl, 2);
     fLen_ = fLen; eLen_ = eLen;
     eMultiplier_ = fLen*(fLen+1)/2+fLen+1;
     if(useQueue_) {
@@ -37,19 +37,19 @@ ProbSpanVec ParseChart::getTrimmedAgenda(int l, Prob probWidth, const SpanSet & 
     for(SpanVec::const_iterator it = agenda.begin(); it != agenda.end(); it++) {
         Prob prob = getFromChart(*it)+look.getLookAhead(*it);
         maxProb = max(prob,maxProb);
-        PRINT_DEBUG("Span: " << *it << " getFromChart("<<*it<<") + look.getLookAhead("<<*it<<") == "<<getFromChart(*it)<<" + "<<look.getLookAhead(*it)<<" == "<<prob<< " (max="<<maxProb<<")"<<endl);
+        PRINT_DEBUG("Span: " << *it << " getFromChart("<<*it<<") + look.getLookAhead("<<*it<<") == "<<getFromChart(*it)<<" + "<<look.getLookAhead(*it)<<" == "<<prob<< " (max="<<maxProb<<")"<<endl, 2);
         ret.push_back(ProbSpan(prob,*it));
     }
     // trim the beam if necessary
     unsigned next = 0;
-    PRINT_DEBUG("Max is "<<maxProb<<", saving:");
+    PRINT_DEBUG("Max is "<<maxProb<<", saving:", 2);
     for(unsigned i = 0; i < ret.size(); i++) {
         if(ret[i].first>maxProb+probWidth || preserve.find(ret[i].second) != preserve.end()) {
             ret[next++] = ret[i];
-            PRINT_DEBUG(" "<<ret[i].first<<"/"<<ret[i].second);
+            PRINT_DEBUG(" "<<ret[i].first<<"/"<<ret[i].second, 2);
         }
     }
-    PRINT_DEBUG(endl);
+    PRINT_DEBUG(endl, 2);
     ret.resize(next);
     return ret;
 }

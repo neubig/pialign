@@ -99,7 +99,8 @@ cerr << " A tool for unsupervised Bayesian alignment using phrase-based ITGs" <<
 << " -worditers    Number of iterations to perform with word-based model (def. 0)" << endl
 << " -noshuffle    Don't shuffle the order of the sentences" << endl
 << " -batchlen     The number of sentences to process in a single batch (def. 1)" << endl
-<< " -threads      The number of threads to use (must be <= -batchlen)" << endl << endl;
+<< " -threads      The number of threads to use (must be <= -batchlen)" << endl
+<< " -debug        The amount of debugging output to write (def. 0)" << endl << endl;
     if(err)
         cerr << endl << "Error: " << err << endl;
     exit(1);
@@ -134,6 +135,7 @@ void PIAlign::loadConfig(int argc, const char** argv) {
             else if(!strcmp(argv[i],"-annealsteplen"))  annealStepLen_ = atoi(argv[++i]);
             else if(!strcmp(argv[i],"-batchlen"))       batchLen_ = atoi(argv[++i]);
             else if(!strcmp(argv[i],"-threads"))        numThreads_ = atoi(argv[++i]);
+            else if(!strcmp(argv[i],"-debug"))          globalDebug_ = atoi(argv[++i]);
             else if(!strcmp(argv[i],"-worditers"))      wordIters_ = atoi(argv[++i]);
             else if(!strcmp(argv[i],"-le2f"))           le2fFile_ = argv[++i];
             else if(!strcmp(argv[i],"-lf2e"))           lf2eFile_ = argv[++i];
@@ -536,9 +538,9 @@ pair<SpanNode*,Prob> PIAlign::sampleTree(int sent, const Span & mySpan, const Pa
     bool actChild = (actNode && actNode->left);
     Span actLeft = actChild ? actNode->left->span : Span(0,0,0,0);
 
-    PRINT_DEBUG("sampleTree"<<mySpan << " (left="<<actLeft<<")"<<endl);
-    PRINT_DEBUG(" genChart.getProb[0] == "<<genChart.getProb(mySpan)<<endl);
-    PRINT_DEBUG(" baseChart->getProb[1] == "<<baseChart->getProb(mySpan)<<" --> "<<model_->calcBaseProb(mySpan,baseChart->getProb(mySpan))<<endl);
+    PRINT_DEBUG("sampleTree"<<mySpan << " (left="<<actLeft<<")"<<endl, 2);
+    PRINT_DEBUG(" genChart.getProb[0] == "<<genChart.getProb(mySpan)<<endl, 2);
+    PRINT_DEBUG(" baseChart.getProb[1] == "<<baseChart.getProb(mySpan)<<" --> "<<model_->calcBaseProb(mySpan,baseChart.getProb(mySpan))<<endl, 2);
 
     // remainder are pair probabilities
     Prob tProb;
@@ -547,7 +549,7 @@ pair<SpanNode*,Prob> PIAlign::sampleTree(int sent, const Span & mySpan, const Pa
             Span qls(s,S,u,U), qrs(S,t,U,v), rls(s,S,U,v), rrs(S,t,u,U);
             if(qls.length() && qrs.length()) {
                 tProb = model_->calcTreeProb(qls,qrs,chart,TYPE_REG);
-                PRINT_DEBUG(" calcTreeProb["<<probs.size()<<"]("<<qls<<","<<qrs<<","<<TYPE_REG<<") == "<<tProb<<endl);
+                PRINT_DEBUG(" calcTreeProb["<<probs.size()<<"]("<<qls<<","<<qrs<<","<<TYPE_REG<<") == "<<tProb<<endl, 2);
                 if(tProb > NEG_INFINITY) {
                     if(actChild && actNode->type == TYPE_REG && actLeft == qls)
                         ans = probs.size();
@@ -557,7 +559,7 @@ pair<SpanNode*,Prob> PIAlign::sampleTree(int sent, const Span & mySpan, const Pa
             }
             if(rls.length() && rrs.length() && !monotonic_) {
                 tProb = model_->calcTreeProb(rls,rrs,chart,TYPE_INV);
-                PRINT_DEBUG(" calcTreeProb["<<probs.size()<<"]("<<rls<<","<<rrs<<","<<TYPE_INV<<") == "<<tProb<<endl);
+                PRINT_DEBUG(" calcTreeProb["<<probs.size()<<"]("<<rls<<","<<rrs<<","<<TYPE_INV<<") == "<<tProb<<endl, 2);
                 if(tProb > NEG_INFINITY) { 
                     if(actChild && actNode->type == TYPE_INV && actLeft == rls)
                         ans = probs.size();
@@ -579,7 +581,7 @@ pair<SpanNode*,Prob> PIAlign::sampleTree(int sent, const Span & mySpan, const Pa
     normalizeLogProbs(normProbs,annealLevel_);
     if(ans == -1) {
         if(actNode) {
-            PRINT_DEBUG(" sampleTree("<<mySpan<<") == (NONE): s="<<actNode->span<<", i="<<actNode->phraseid<<", t="<<actNode->type<<", p="<<actNode->prob<<", b="<<actNode->baseProb<<", a="<<actNode->add<<endl);
+            PRINT_DEBUG(" sampleTree("<<mySpan<<") == (NONE): s="<<actNode->span<<", i="<<actNode->phraseid<<", t="<<actNode->type<<", p="<<actNode->prob<<", b="<<actNode->baseProb<<", a="<<actNode->add<<endl, 2);
             return pair<SpanNode*,Prob>(0,NEG_INFINITY);
         }
         if(normProbs.size() == 0) 
@@ -590,9 +592,9 @@ pair<SpanNode*,Prob> PIAlign::sampleTree(int sent, const Span & mySpan, const Pa
     }
     Prob ansProb = (add?log(normProbs[ans]):0);
 
-    PRINT_DEBUG(" sampleTree("<<mySpan<<") == ("<<ans<<" --> "<<ansProb<<")");
-    if(actNode) PRINT_DEBUG(": s="<<actNode->span<<", i="<<actNode->phraseid<<", t="<<actNode->type<<", p="<<actNode->prob<<", b="<<actNode->baseProb<<", a="<<actNode->add);
-    PRINT_DEBUG(", prob="<<probs[ans]<<endl);
+    PRINT_DEBUG(" sampleTree("<<mySpan<<") == ("<<ans<<" --> "<<ansProb<<")", 2);
+    if(actNode) PRINT_DEBUG(": s="<<actNode->span<<", i="<<actNode->phraseid<<", t="<<actNode->type<<", p="<<actNode->prob<<", b="<<actNode->baseProb<<", a="<<actNode->add, 2);
+    PRINT_DEBUG(", prob="<<probs[ans]<<endl, 2);
      
     // make the span node
     SpanNode * myNode = new SpanNode(mySpan);
@@ -657,7 +659,7 @@ SpanNode * PIAlign::buildSample(int sent, ParseChart & chart, LookAhead * lookAh
     chart.initialize(e.length(),f.length());
     SpanProbMap genChart = SpanProbMap();  // map of generative probs
 
-    PRINT_DEBUG(endl << "---- SAMPLING SENTENCE "<<sent<<" ----"<<endl);
+    PRINT_DEBUG(endl << "---- SAMPLING SENTENCE "<<sent<<" ----"<<endl, 1);
 
     gettimeofday(&tInit, NULL);
     // add the base probabilities
@@ -696,14 +698,14 @@ SpanNode * PIAlign::buildSample(int sent, ParseChart & chart, LookAhead * lookAh
     // measure the prop of the old value
     pair<SpanNode*,Prob> head;
     if(actNode) {
-        PRINT_DEBUG("---- Sampling Old Tree ----"<<endl);
+        PRINT_DEBUG("---- Sampling Old Tree ----"<<endl, 2);
         head = sampleTree(sent,Span(0,eLen,0,fLen),chart,genChart,*baseChart,true,actNode);
         head.second += sentProb; jd.oldProp += head.second;
         if(head.first) delete head.first;
     }
 
     // sample the new value
-    PRINT_DEBUG("---- Sampling New Tree ----"<<endl);
+    PRINT_DEBUG("---- Sampling New Tree ----"<<endl, 2);
     head = sampleTree(sent,Span(0,eLen,0,fLen),chart,genChart,*baseChart,true);
     head.second += sentProb; jd.newProp += head.second;
 
@@ -791,7 +793,7 @@ void* buildSamples(void* ptr) {
     std::vector<SpanNode*>::iterator oldIt = job->beginOld;
     std::vector<SpanNode*>::iterator newIt = job->beginNew;
     for(vector<int>::iterator s = job->begin; s != job->end; s++) {
-        PRINT_DEBUG("Sentence "<<*s<<endl);
+        PRINT_DEBUG("Sentence "<<*s<<endl, 1);
         *newIt = pia->buildSample(*s,job->chart,job->lookAhead,pia->getProbWidth(),job->details,*oldIt);
         oldIt++; newIt++;
     }
@@ -901,7 +903,7 @@ void PIAlign::train() {
                 int s = sentOrder[beginSent+i];
                 int el = eCorpus_[s].length(), fl = fCorpus_[s].length();
                 jd.words += el+fl;
-                PRINT_DEBUG("---- removing sentence "<<s<<" ----"<<endl);
+                PRINT_DEBUG("---- removing sentence "<<s<<" ----"<<endl, 1);
                 oldNodes[i] = model_->removeSentence(nCorpus_[s], base_);
                 if(oldNodes[i]) {
                     buildSpans(oldNodes[i]); moveRight(oldNodes[i],0,0);
@@ -937,7 +939,7 @@ void PIAlign::train() {
             
             for(int i = 0; i < myBatch; i++) {
                 int s = sentOrder[beginSent+i];
-                PRINT_DEBUG("---- adding sentence "<<s<<" ----"<<endl);
+                PRINT_DEBUG("---- adding sentence "<<s<<" ----"<<endl, 1);
                 tNew += model_->addSentence(eCorpus_[s],fCorpus_[s],newNodes[i],ePhrases_,fPhrases_,jointPhrases_,base_);
             }
 
@@ -945,26 +947,27 @@ void PIAlign::train() {
             Prob accept = tOld ? tNew - tOld - jd.newProp + jd.oldProp : 0;
             bool isAccepted = !doReject_ || (accept < 0 ? bernoulliSample(exp(accept)) : true);
             if(isAccepted) {
-                PRINT_DEBUG("---- accepting ----"<<endl);
+                PRINT_DEBUG("---- accepting ----"<<endl, 1);
                 for(int i = 0; i < myBatch; i++) {
                     int s = sentOrder[beginSent+i];
                     if(oldNodes[i])
                         delete oldNodes[i];
                     delete nCorpus_[s];
                     nCorpus_[s] = newNodes[i];
-                    PRINT_DEBUG("top phrase "<<nCorpus_[s]->phraseid<<endl);
+                    PRINT_DEBUG("top phrase "<<nCorpus_[s]->phraseid<<endl, 2);
                 }
                 jd.accepted += myBatch;
                 jd.likelihood += tNew;
             } else {
                 for(int i = myBatch-1; i >= 0; i--) {
-                    PRINT_DEBUG("---- rejecting removing "<<s<<" ----"<<endl);
+                    int s = sentOrder[beginSent+i];
+                    PRINT_DEBUG("---- rejecting removing "<<s<<" ----"<<endl, 1);
                     SpanNode * node = model_->removeSentence(newNodes[i], base_); delete node;
                     delete newNodes[i];
                 }
                 for(int i = 0; i < myBatch; i++) {
                     int s = sentOrder[beginSent+i];
-                    PRINT_DEBUG("---- rejecting adding "<<s<<" ----"<<endl);
+                    PRINT_DEBUG("---- rejecting adding "<<s<<" ----"<<endl, 1);
                     // this dies frequently, so catch the error and at least print the tree
                     try {
                         model_->addSentence(eCorpus_[s],fCorpus_[s],oldNodes[i],ePhrases_,fPhrases_,jointPhrases_,base_);
@@ -980,7 +983,7 @@ void PIAlign::train() {
                 jd.likelihood += tOld;
             }
             
-            PRINT_DEBUG("At rejection tn="<<tNew<<", to="<<tOld<<", pn="<<jd.newProp<<" ("<<jd.newProp+jd.chartProb<<"), po="<<jd.oldProp<<" ("<<jd.oldProp+jd.chartProb<<") == "<<accept<<": "<<(isAccepted?"accept":"REJECT")<<endl);
+            PRINT_DEBUG("At rejection tn="<<tNew<<", to="<<tOld<<", pn="<<jd.newProp<<" ("<<jd.newProp+jd.chartProb<<"), po="<<jd.oldProp<<" ("<<jd.oldProp+jd.chartProb<<") == "<<accept<<": "<<(isAccepted?"accept":"REJECT")<<endl, 1);
 
             if(sents / 100 != lastSent) {
                 cerr << "\r" << sents;
@@ -1056,7 +1059,7 @@ void PIAlign::trim() {
     //  so we can delete only appropriate phrases
     bool remNull = model_->getRememberNull(); model_->setRememberNull(true);
     for(PairWordSet::iterator it = jointPhrases_.begin(); it != jointPhrases_.end(); it++) {
-        PRINT_DEBUG("model_->calcGenProb("<<it->second<<",<"<<it->first.first<<","<<it->first.second<<"> Span(0,"<<eLens[it->first.first]<<",0,"<<fLens[it->first.second]<<")) == "<<model_->calcGenProb(it->second,Span(0,eLens[it->first.first],0,fLens[it->first.second]))<<endl);
+        PRINT_DEBUG("model_->calcGenProb("<<it->second<<",<"<<it->first.first<<","<<it->first.second<<"> Span(0,"<<eLens[it->first.first]<<",0,"<<fLens[it->first.second]<<")) == "<<model_->calcGenProb(it->second,Span(0,eLens[it->first.first],0,fLens[it->first.second]))<<endl, 1);
         if(model_->calcGenProb(it->second,Span(0,eLens[it->first.first],0,fLens[it->first.second])) > NEG_INFINITY) {
             eActive[it->first.first]++; fActive[it->first.second]++;
         }

@@ -25,11 +25,11 @@ public:
     }
     
     Prob calcBaseProb(const Span & mySpan, Prob baseMeas) const {
-        PRINT_DEBUG("FlatModel::calcBaseProb @ "<<mySpan<<" ("<<typeProbs_[TYPE_TERM]<<"+"<<((!isNull(mySpan)||rememberNull_)?phraseFallback_:0)<<"+"<<baseMeas<<") == "<<typeProbs_[TYPE_TERM]+baseMeas+((!isNull(mySpan)||rememberNull_)?phraseFallback_:0)<<std::endl);
+        PRINT_DEBUG("FlatModel::calcBaseProb @ "<<mySpan<<" ("<<typeProbs_[TYPE_TERM]<<"+"<<((!isNull(mySpan)||rememberNull_)?phraseFallback_:0)<<"+"<<baseMeas<<") == "<<typeProbs_[TYPE_TERM]+baseMeas+((!isNull(mySpan)||rememberNull_)?phraseFallback_:0)<<std::endl, 2);
         return typeProbs_[TYPE_TERM]+baseMeas+(!isNull(mySpan)||rememberNull_?phraseFallback_:0);
     }
     Prob calcTreeProb(const Span & mySpan, Prob myProb, const Span & yourSpan, Prob yourProb, int type) const {
-        PRINT_DEBUG("FlatModel::calcTree("<<mySpan<<"/"<<yourSpan<<") == " <<typeProbs_[type]<<"+"<<myProb<<"+"<<yourProb<<" == "<<typeProbs_[type]+myProb+yourProb<<std::endl);
+        PRINT_DEBUG("FlatModel::calcTree("<<mySpan<<"/"<<yourSpan<<") == " <<typeProbs_[type]<<"+"<<myProb<<"+"<<yourProb<<" == "<<typeProbs_[type]+myProb+yourProb<<std::endl, 2);
         return typeProbs_[type]+myProb+yourProb;
     }
 

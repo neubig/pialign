@@ -27,17 +27,17 @@ public:
         for(SpanProbMap::const_iterator it = myChart->begin(); it != myChart->end(); it++) {
             SpanProbMap::iterator bit = this->find(it->first);
             if(bit != this->end()) {
-                PRINT_DEBUG("meas "<<i<<", span "<<it->first<<", base="<<bit->second<<", "<<myProb<<"+"<<it->second<<std::endl);
+                PRINT_DEBUG("meas span "<<it->first<<", base="<<bit->second<<", "<<myProb<<"+"<<it->second<<std::endl, 2);
                 bit->second = addLogProbs(bit->second,myProb+it->second);
             } else {
-                PRINT_DEBUG("meas "<<i<<", span "<<it->first<<", nobase, "<<myProb<<"+"<<it->second<<std::endl);
+                PRINT_DEBUG("meas span "<<it->first<<", nobase, "<<myProb<<"+"<<it->second<<std::endl, 2);
                 this->insert(SpanProbMap::value_type(it->first,myProb+it->second));
             }
         }
     }
 
     std::vector<Prob> getElems(const Span & mySpan) const {
-        PRINT_DEBUG("maps_.size() == "<<maps_.size()<<std::endl);
+        PRINT_DEBUG("maps_.size() == "<<maps_.size()<<std::endl, 2);
         std::vector<Prob> probs(maps_.size());
         for(unsigned i = 0; i < maps_.size(); i++)
             probs[i] = maps_[i]->getProb(mySpan);
@@ -105,13 +105,13 @@ public:
         if(baseElems.size() == 0) 
             std::cerr << "baseElems.size() == 0 for add word "<<pid << std::endl;
         else {
-            PRINT_DEBUG("baseElems.size() == " <<baseElems.size()<<std::endl);
+            PRINT_DEBUG("baseElems.size() == " <<baseElems.size()<<std::endl, 2);
             for(unsigned i = 0; i < myProbs.size(); i++)
                 myProbs[i] += log(dist_.getProb(i));
             normalizeLogProbs(myProbs);
             int ans = discreteSample(myProbs,1.0);
             dist_.add(ans);
-            PRINT_DEBUG("Added "<<ans<<", probability "<<dist_.getProb(ans)<<std::endl);
+            PRINT_DEBUG("Added "<<ans<<", probability "<<dist_.getProb(ans)<<std::endl, 2);
         }
     }
     
@@ -128,7 +128,7 @@ public:
             ans = discreteSample(myProbs,1.0);
             dist_.remove(ans);
             dist_.setStrength(str);
-            PRINT_DEBUG("Removed "<<ans<<", probability "<<dist_.getProb(ans)<<std::endl);
+            PRINT_DEBUG("Removed "<<ans<<", probability "<<dist_.getProb(ans)<<std::endl, 2);
         }
     }
 

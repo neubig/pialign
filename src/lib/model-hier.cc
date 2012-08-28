@@ -28,17 +28,17 @@ Prob HierModel::addSentence(const WordString & e, const WordString & f, SpanNode
     Prob totProb = 0;
     if(node->type == TYPE_GEN) {
         totProb = log(phrases_.getProb(node->phraseid,0));
-        PRINT_DEBUG(" ModelHier::=genProb: "<<totProb<<" @ "<<mySpan<<endl);
+        PRINT_DEBUG(" ModelHier::=genProb: "<<totProb<<" @ "<<mySpan<<endl, 2);
         phrases_.addExisting(node->phraseid);
     } else {
         if(node->type == TYPE_BASE) {
             totProb = log(phrases_.getFallbackProb())+addType(toAdd)+node->baseProb;
-            PRINT_DEBUG(" ModelHier::=baseProb: "<<totProb<<" @ "<<mySpan<<endl);
+            PRINT_DEBUG(" ModelHier::=baseProb: "<<totProb<<" @ "<<mySpan<<endl, 2);
         }
         else {
             Prob typeProb = addType(toAdd);
             totProb = log(phrases_.getFallbackProb())+typeProb+leftProb+rightProb;
-            PRINT_DEBUG(" ModelHier::=treeProb: "<<log(phrases_.getFallbackProb())<<"+"<<typeProb<<"+"<<leftProb<<"+"<<rightProb<<" == "<<totProb<<" @ "<<mySpan<<endl);
+            PRINT_DEBUG(" ModelHier::=treeProb: "<<log(phrases_.getFallbackProb())<<"+"<<typeProb<<"+"<<leftProb<<"+"<<rightProb<<" == "<<totProb<<" @ "<<mySpan<<endl, 2);
         }
         phrases_.addNew(node->phraseid,lId,rId,toAdd);
     }
@@ -51,7 +51,7 @@ SpanNode* HierModel::removePhrasePair(WordId jId, BaseMeasure * base) {
     SpanNode* ret = new SpanNode(Span(0,0,0,0));
     ret->phraseid = jId;
     ret->prob = phrases_.remove(jId);
-    PRINT_DEBUG("ret->prob("<<jId<<") = "<<ret->prob<<endl);
+    PRINT_DEBUG("ret->prob("<<jId<<") = "<<ret->prob<<endl, 2);
     // this was generated from the fallback
     if(phrases_.isRemovedTable()) {
         PyTable<WordId> table = phrases_.getLastTable();
@@ -69,7 +69,7 @@ SpanNode* HierModel::removePhrasePair(WordId jId, BaseMeasure * base) {
             ret->baseProb = base->getBase(jId);
             ret->baseElems = base->getElems(jId);
             ret->prob += ret->baseProb;
-            PRINT_DEBUG("ret->baseProb == base["<<jId<<"] == "<<base[jId]<<endl);
+            PRINT_DEBUG("ret->baseProb == base["<<jId<<"] == "<<ret->baseProb<<endl, 2);
             ret->type = TYPE_BASE;
             base->remove(ret->span,ret->phraseid,ret->baseProb,ret->baseElems);
         }

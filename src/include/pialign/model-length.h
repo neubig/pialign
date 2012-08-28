@@ -35,7 +35,7 @@ public:
     
     Prob calcBaseProb(const Span & mySpan, Prob baseMeas) const {
         int idx = mySpan.length()-1;
-        PRINT_DEBUG("LengthModel::calcBaseProb"<<mySpan<<" == "<<sepFallbacks_[idx]<<"+"<<sepType_[idx][TYPE_TERM]<<"+"<<baseMeas<<" == "<<sepFallbacks_[idx]+sepType_[idx][TYPE_TERM]+baseMeas<<std::endl);
+        PRINT_DEBUG("LengthModel::calcBaseProb"<<mySpan<<" == "<<sepFallbacks_[idx]<<"+"<<sepType_[idx][TYPE_TERM]<<"+"<<baseMeas<<" == "<<sepFallbacks_[idx]+sepType_[idx][TYPE_TERM]+baseMeas<<std::endl, 2);
         return sepFallbacks_[idx]+sepType_[idx][TYPE_TERM]+baseMeas;
     }
 
@@ -45,7 +45,7 @@ public:
         if(idx == 0)
             throw std::runtime_error("illegal value in calcTreeProb");
 #endif
-        PRINT_DEBUG("LengthModel::calcTreeProb("<<mySpan<<","<<myProb<<","<<yourSpan<<","<<yourProb<<","<<type<<") == "<<sepFallbacks_[idx]<<"+"<<sepSplits_[idx]<<"+"<<sepType_[idx][type]<<"+"<<myProb<<"+"<<yourProb<<" == "<<sepFallbacks_[idx]+sepSplits_[idx]+sepType_[idx][type]+myProb+yourProb<<std::endl);
+        PRINT_DEBUG("LengthModel::calcTreeProb("<<mySpan<<","<<myProb<<","<<yourSpan<<","<<yourProb<<","<<type<<") == "<<sepFallbacks_[idx]<<"+"<<sepSplits_[idx]<<"+"<<sepType_[idx][type]<<"+"<<myProb<<"+"<<yourProb<<" == "<<sepFallbacks_[idx]+sepSplits_[idx]+sepType_[idx][type]+myProb+yourProb<<std::endl, 2);
         return sepFallbacks_[idx]+sepSplits_[idx]+sepType_[idx][type]+myProb+yourProb;
     }
     inline int saveIdx(WordId jId, int index) {

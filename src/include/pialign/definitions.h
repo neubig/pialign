@@ -24,8 +24,17 @@
 #include <algorithm>
 #include <iostream>
 
+static int globalDebug_;
 
-#define PRINT_DEBUG(msg)
+#ifdef DEBUG_ON
+#define PRINT_DEBUG(msg, lev) do {            \
+        if(lev <= globalDebug_)                    \
+            std::cerr << msg;                     \
+        }                                         \
+        while (0);
+#else
+#define PRINT_DEBUG(msg, lev)
+#endif
 
 #define PRINT_LOG(msg) do {                   \
      std::cerr << msg;                           \

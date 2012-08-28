@@ -141,7 +141,7 @@ public:
 
     // add a type and return its log probability
     inline Prob addType(WordId id) {
-        PRINT_DEBUG(" addType("<<id<<")");
+        PRINT_DEBUG(" addType("<<id<<")", 2);
         Prob ret = 0;
         if(id == 0) {
             ret = log(termOrNot_.getProb(0));
@@ -150,13 +150,13 @@ public:
             ret = log(termOrNot_.getProb(1)*forBack_.getProb(id-1));
             termOrNot_.add(1); forBack_.add(id-1);
         }
-        PRINT_DEBUG(" == "<<ret<<std::endl);
+        PRINT_DEBUG(" == "<<ret<<std::endl, 2);
         return ret;
     }
 
     // remove a type and return its log probability
     inline Prob removeType(WordId id) {
-        PRINT_DEBUG(" removeType("<<id<<")");
+        PRINT_DEBUG(" removeType("<<id<<")", 2);
         Prob ret;
         if(id == 0) {
             termOrNot_.remove(0);
@@ -165,7 +165,7 @@ public:
             termOrNot_.remove(1); forBack_.remove(id-1);
             ret = log(termOrNot_.getProb(1)*forBack_.getProb(id-1));
         }
-        PRINT_DEBUG(" == "<<ret<<std::endl);
+        PRINT_DEBUG(" == "<<ret<<std::endl, 2);
         return ret;
     }
 

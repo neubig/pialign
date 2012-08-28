@@ -15,12 +15,12 @@ void BaseModelOne::combineBases(const WordString & e, const WordString & f, std:
             // add zero and one values
             base[j-J] = nullProb;
             base[j] = getCond(myE,f[j]);
-            PRINT_DEBUG("combineBases("<<i<<","<<j<<") == "<<base[j]<<std::endl)
+            PRINT_DEBUG("combineBases("<<i<<","<<j<<") == "<<base[j]<<std::endl, 2)
         }
         base[-1] = nullProb;
         for(int l = 1; l < maxLen_; l++)
             for(int j = 0; j < J-l-1; j++) {
-                PRINT_DEBUG("combineBases("<<i<<","<<j<<","<<l<<") == "<<base[j]<<std::endl);
+                PRINT_DEBUG("combineBases("<<i<<","<<j<<","<<l<<") == "<<base[j]<<std::endl, 2);
                 base[j+l*J] = (base[j+(l-1)*J]*l+base[j+l])/(l+1);
             }
     }
@@ -61,7 +61,7 @@ SpanProbMap * BaseModelOne::getBaseChart(const WordString & e, const WordString 
                         noSym = (em1+fProb+fm1+eProb)/2+poisProbs_[t-s]+poisProbs_[v-u];
                     else 
                         noSym = addLogProbs(em1+fProb,fm1+eProb)-l2+poisProbs_[t-s]+poisProbs_[v-u];
-                    // PRINT_DEBUG("calcBaseProb @ "<<mySpan<<", addLogProbs("<<em1<<"+"<<fProb<<","<<fm1<<"+"<<eProb<<")+"<<poisProbs_[t-s]<<"+"<<poisProbs_[v-u]<<") == "<<noSym<<" --> "<<yesSym<<std::endl);
+                    PRINT_DEBUG("calcBaseProb @ "<<mySpan<<", addLogProbs("<<em1<<"+"<<fProb<<","<<fm1<<"+"<<eProb<<")+"<<poisProbs_[t-s]<<"+"<<poisProbs_[v-u]<<") == "<<noSym<<" --> "<<noSym<<std::endl, 2);
                     baseChart->insertProb(mySpan,noSym); // add to the base chart
                 }
             }
