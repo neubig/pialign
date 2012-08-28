@@ -126,7 +126,7 @@ int testMatch(ProbModel & mod) {
         } 
     }
 
-    if(addProb != remProb) {
+    if(abs(addProb - remProb) > 0.01) {
         cerr << "addProb "<<addProb<<" != remProb "<<remProb<<endl;
         return er("testMatch", "probabilities did not match");
     }
