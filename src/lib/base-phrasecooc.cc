@@ -3,6 +3,7 @@
 #include "pialign/base-phrasecooc.h"
 #include "pialign/esa.hxx"
 #include <map>
+#include <climits>
 
 using namespace std;
 using namespace pialign;
@@ -89,7 +90,7 @@ void BasePhraseCooc::trainCooc(Corpus & es, const WordSymbolSet & eVocab, Corpus
                     sum += geomMean;
                     if(eIds[i] == -1) eIds[i] = eSymbols_.getId(eStrs[i],true);
                     if(fIds[cit->first] == -1) fIds[cit->first] = fSymbols_.getId(fStrs[cit->first],true);
-                    jProbs_.insert(PairProbMap::value_type(pair<WordId,WordId>(eIds[i],fIds[cit->first]),geomMean));
+                    jProbs_.insert(PairProbMap::value_type(eIds[i] * INT_MAX + fIds[cit->first],geomMean));
 
                     // // ---- print ----
                     // for(unsigned j = 0; j < eStrs[i].length(); j++) {
@@ -124,7 +125,7 @@ SpanProbMap * BasePhraseCooc::getBaseChart(const WordString & e, const WordStrin
         for(int j = 0; j < (int)fEdges.size(); j++) {
             const LabeledEdge & fe = fEdges[j];
             PairProbMap::const_iterator it = 
-                jProbs_.find(pair<WordId,WordId>(ee.l,fe.l));
+                jProbs_.find(ee.l * INT_MAX + fe.l);
             if(it != jProbs_.end()) { 
                 // cerr << " found in jProbs (["<<ee.s<<","<<ee.e<<","<<ee.l<<"]/["<<fe.e<<","<<fe.s<<","<<fe.l<<"]) = "<<it->second<<endl;
                 Span s(ee.s, ee.e, fe.s, fe.e);

@@ -7,6 +7,7 @@
 #include "pialign/parse-chart.h"
 #include "pialign/base-measure.h"
 #include <vector>
+#include <climits>
 
 namespace pialign {
 
@@ -120,10 +121,11 @@ public:
             // std::cerr << "getProb("<<it->second<<") == "<<myProb<<std::endl;
             if(myProb != 0.0) {
                 jProbs[it->second] = myProb;
-                if((int)eProbs.size() <= it->first.first) eProbs.resize(it->first.first+1,0);
-                eProbs[it->first.first] += myProb;
-                if((int)fProbs.size() <= it->first.second) fProbs.resize(it->first.second+1,0);
-                fProbs[it->first.second] += myProb;
+                WordId first = WordPairFirst(it->first), second = WordPairSecond(it->first);
+                if((int)eProbs.size() <= first) eProbs.resize(first+1,0);
+                eProbs[first] += myProb;
+                if((int)fProbs.size() <= second) fProbs.resize(second+1,0);
+                fProbs[second] += myProb;
             }
         }
         dProbs = derivations_;

@@ -332,12 +332,11 @@ WordId getPhraseId(const WordString & str, StringWordSet & phrases, bool add) {
     return phrases.getId(str,add);
 }
 WordId getPhraseId(WordId eId, WordId fId, PairWordSet & phrases, bool add) {
-    pair<WordId,WordId> myPair(eId,fId);
-    return phrases.getId(myPair,add);
+    return phrases.getId(WordPairHash(eId, fId),add);
 }
 
 inline Prob getModelOne(const PairProbMap & model1, WordId e, WordId f) {
-    PairProbMap::const_iterator it = model1.find(pair<WordId,WordId>(e,f));
+    PairProbMap::const_iterator it = model1.find(WordPairHash(e, f));
     return (it==model1.end()?-50:it->second);
 }
 
@@ -352,7 +351,7 @@ void PIAlign::addGenerativeProbs(const WordString & e, const WordString & f, Par
         const LabeledEdge & ee = eEdges[i];
         for(int j = 0; j < (int)fEdges.size(); j++) {
             const LabeledEdge & fe = fEdges[j];
-            WordId id = jointPhrases_.getId(pair<WordId,WordId>(ee.l,fe.l));
+            WordId id = jointPhrases_.getId(WordPairHash(ee.l, fe.l));
             if(id >= 0) { 
                 Span s(ee.s, ee.e, fe.s, fe.e);
                 Prob myProb = model_->calcGenProb(id,s);
@@ -753,14 +752,14 @@ void PIAlign::printPhraseTable(ostream & ptos) {
     model_->calcPhraseTable(jointPhrases_,eProbs,fProbs,jProbs,dProbs);
     double phrasePen = exp(1);
     for(PairWordSet::const_iterator it = jointPhrases_.begin(); it != jointPhrases_.end(); it++) {
-        const WordString & estr = ePhrases_.getSymbol(it->first.first);
-        const WordString & fstr = fPhrases_.getSymbol(it->first.second);
+        const WordString & estr = ePhrases_.getSymbol(WordPairFirst(it->first));
+        const WordString & fstr = fPhrases_.getSymbol(WordPairSecond(it->first));
         if(it->second < (int)jProbs.size() && jProbs[it->second] != 0) {
             if((int)estr.length() <= printMax_ && (int)fstr.length() <= printMax_ 
                 && (int)estr.length() >= printMin_ && (int)fstr.length() >= printMin_) {
                 printSpan(estr,fstr,Span(0,estr.length(),0,fstr.length()), ptos," ||| "," ","","");
-                ptos << " ||| " << jProbs[it->second]/fProbs[it->first.second] <<
-                        " " << jProbs[it->second]/eProbs[it->first.first] <<
+                ptos << " ||| " << jProbs[it->second]/fProbs[WordPairFirst(it->first)] <<
+                        " " << jProbs[it->second]/eProbs[WordPairSecond(it->first)] <<
                         " " << jProbs[it->second] <<
                         " " << dProbs[it->second];
                 // if we are using model one, output lexical translation probabilities as well
@@ -825,9 +824,9 @@ void PIAlign::buildSpans(SpanNode* node) {
         node->span.ee = node->left->span.ee + node->right->span.ee;
         node->span.fe = node->left->span.fe + node->right->span.fe;
     } else {
-        pair<WordId,WordId> pair = jointPhrases_.getSymbol(node->phraseid);
-        node->span.ee = ePhrases_.getSymbol(pair.first).length();
-        node->span.fe = fPhrases_.getSymbol(pair.second).length();
+        WordPairId pair = jointPhrases_.getSymbol(node->phraseid);
+        node->span.ee = ePhrases_.getSymbol(WordPairFirst(pair)).length();
+        node->span.fe = fPhrases_.getSymbol(WordPairSecond(pair)).length();
     }
     // cerr << " build: s="<<node->span<<", i="<<node->phraseid<<", t="<<node->type<<", p="<<node->prob<<", b="<<node->baseProb<<", a="<<node->add<<endl;
 }
@@ -1059,9 +1058,10 @@ void PIAlign::trim() {
     //  so we can delete only appropriate phrases
     bool remNull = model_->getRememberNull(); model_->setRememberNull(true);
     for(PairWordSet::iterator it = jointPhrases_.begin(); it != jointPhrases_.end(); it++) {
-        PRINT_DEBUG("model_->calcGenProb("<<it->second<<",<"<<it->first.first<<","<<it->first.second<<"> Span(0,"<<eLens[it->first.first]<<",0,"<<fLens[it->first.second]<<")) == "<<model_->calcGenProb(it->second,Span(0,eLens[it->first.first],0,fLens[it->first.second]))<<endl, 1);
-        if(model_->calcGenProb(it->second,Span(0,eLens[it->first.first],0,fLens[it->first.second])) > NEG_INFINITY) {
-            eActive[it->first.first]++; fActive[it->first.second]++;
+        int first = WordPairFirst(it->first), second = WordPairSecond(it->first);
+        PRINT_DEBUG("model_->calcGenProb("<<it->second<<",<"<<first<<","<<second<<"> Span(0,"<<eLens[first]<<",0,"<<fLens[second]<<")) == "<<model_->calcGenProb(it->second,Span(0,eLens[first],0,fLens[second]))<<endl, 1);
+        if(model_->calcGenProb(it->second,Span(0,eLens[first],0,fLens[second])) > NEG_INFINITY) {
+            eActive[first]++; fActive[second]++;
         }
         else
             jDead.push_back(it->second);

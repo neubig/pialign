@@ -23,6 +23,7 @@
 #include <cstdlib>
 #include <algorithm>
 #include <iostream>
+#include <climits>
 
 static int globalDebug_;
 
@@ -62,6 +63,7 @@ typedef unsigned PosId;
 typedef double Prob;
 typedef int NodeId;
 typedef int WordId;
+typedef long long WordPairId;
 
 class Edge {
 public:
@@ -132,17 +134,6 @@ public:
     }
 };
 
-template < class T >
-class PairHash {
-public:
-    size_t operator()(const std::pair<T,T> & x) const {
-        size_t hash = 5381;
-        hash = ((hash << 5) + hash) + x.first;
-        hash = ((hash << 5) + hash) + x.second;
-        return hash;
-    }
-};
-
 class WordString {
 
 protected:
@@ -199,14 +190,27 @@ public:
 };
 
 typedef gng::SymbolSet< std::string, WordId > WordSymbolSet;
-typedef gng::SymbolSet< std::pair<WordId, WordId>, WordId, PairHash<WordId> > PairWordSet;
-typedef std::tr1::unordered_map< std::pair<WordId, WordId>, Prob, PairHash<WordId> > PairProbMap;
+typedef gng::SymbolSet< WordPairId, WordId > PairWordSet;
+typedef std::tr1::unordered_map< WordPairId, Prob > PairProbMap;
 typedef gng::SymbolMap< Span, int, SpanHash > SpanSymbolMap;
 typedef std::vector< Span > SpanVec;
 typedef std::tr1::unordered_set< Span, SpanHash > SpanSet;
 typedef std::vector< SpanVec > Agendas; 
 typedef std::pair<Prob, Span> ProbSpan;
 typedef std::vector< ProbSpan > ProbSpanVec;
+
+inline WordPairId WordPairHash(WordId e, WordId f) {
+    // cerr << "WordPairHash("<<e<<", "<<f<<") == " << e * (WordPairId) INT_MAX + f << endl;
+    return e * (WordPairId) INT_MAX + f;
+}
+inline WordId WordPairFirst(WordPairId p) {
+    // cerr << "WordPairFirst("<<p<<") == " << p / INT_MAX << endl;
+    return p / INT_MAX;
+}
+inline WordId WordPairSecond(WordPairId p) {
+    // cerr << "WordPairSecond("<<p<<") == " << p % INT_MAX << endl;
+    return p % INT_MAX;
+}
 
 
 class StringWordSet : public gng::SymbolSet< WordString, WordId, WordStringHash > {

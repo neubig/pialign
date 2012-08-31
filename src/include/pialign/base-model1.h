@@ -6,6 +6,7 @@
 #include <fstream>
 #include <string>
 #include <stdexcept>
+#include <climits>
 
 namespace pialign {
 
@@ -26,7 +27,7 @@ public:
 
     // get the conditional probabilitiy
     Prob getCond(WordId e, WordId f) const {
-        PairProbMap::const_iterator it = conds_.find(std::pair<WordId,WordId>(e,f));
+        PairProbMap::const_iterator it = conds_.find(WordPairHash(e,f));
         return it != conds_.end() ? it->second : MIN_MODEL1_PROB;
     }
 

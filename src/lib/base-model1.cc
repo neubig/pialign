@@ -1,4 +1,5 @@
 #include "pialign/base-model1.h"
+#include <climits>
 
 using namespace pialign;
 using namespace std;
@@ -93,7 +94,7 @@ void BaseModelOne::loadModelOne(const char* e2fFile, WordSymbolSet & eVocab, Wor
         } else if (fId != 0) {
             if(eId) eId+=eBonus;
             fId+=fBonus;
-            conds_.insert(std::pair< std::pair<WordId, WordId>, Prob>(std::pair<WordId,WordId>(fId,eId), c));
+            conds_.insert(std::pair< WordPairId, Prob>(WordPairHash(fId, eId), c));
             lineCount++;
         }
     }
@@ -103,7 +104,7 @@ void BaseModelOne::loadModelOne(const char* e2fFile, WordSymbolSet & eVocab, Wor
 void BaseModelOne::trainModelOne(const Corpus & es, const Corpus & fs, int eSize, int fSize, int sentLen) {
     PairProbMap count;
     std::vector<Prob> total(fSize+eSize), tBuff(sentLen+1); 
-    std::vector< std::pair<WordId,WordId> > pBuff(sentLen+1);
+    std::vector< WordPairId > pBuff(sentLen+1);
     // initialize the probability
     std::cerr << "Training model 1" << std::endl;
     int i,j,k,iter=0;
@@ -111,11 +112,11 @@ void BaseModelOne::trainModelOne(const Corpus & es, const Corpus & fs, int eSize
     for(i = 0; i < (int)es.size(); i++) {
         for(j = 0; j < (int)es[i].length(); j++) {
             for(k = 0; k < (int)fs[i].length(); k++) {
-                std::pair<WordId,WordId> id(es[i][j],fs[i][k]);
+                WordPairId id = WordPairHash(es[i][j], fs[i][k]);
                 conds_.insert(PairProbMap::value_type(id,uniProb));
                 count.insert(PairProbMap::value_type(id,0.0));
             }
-            std::pair<WordId,WordId> id(es[i][j],0);
+            WordPairId id = WordPairHash(es[i][j], 0);
             conds_.insert(PairProbMap::value_type(id,uniProb));
             count.insert(PairProbMap::value_type(id,0.0));
         }
@@ -138,11 +139,11 @@ void BaseModelOne::trainModelOne(const Corpus & es, const Corpus & fs, int eSize
                 sTotal = 0;
                 // do words + null
                 for(k = 0; k < (int)fs[i].length(); k++) {
-                    pBuff[k] = std::pair<WordId,WordId>(es[i][j],fs[i][k]);
+                    pBuff[k] = WordPairHash(es[i][j], fs[i][k]);
                     tBuff[k] = conds_.find(pBuff[k])->second;
                     sTotal += tBuff[k];
                 }
-                pBuff[k] = std::pair<WordId,WordId>(es[i][j],0);
+                pBuff[k] = WordPairHash(es[i][j], 0);
                 tBuff[k] = conds_.find(pBuff[k])->second;
                 sTotal += tBuff[k];
                 // likelihood
@@ -151,13 +152,13 @@ void BaseModelOne::trainModelOne(const Corpus & es, const Corpus & fs, int eSize
                 for(k = 0; k < (int)fs[i].length()+1; k++) {
                     norm = tBuff[k]/sTotal;
                     count[pBuff[k]] += norm;
-                    total[pBuff[k].second] += norm;
+                    total[WordPairSecond(pBuff[k])] += norm;
                 }
             }
         }
         // M step
         for(PairProbMap::iterator it = count.begin(); it != count.end(); it++)
-            conds_[it->first] = it->second/total[it->first.second];
+            conds_[it->first] = it->second/total[WordPairSecond(it->first)];
         std::cerr << " Iteration " << ++iter << ": likelihood "<<lik<<std::endl;
     } while((lastLik == 0.0 || (lastLik-lik) < lik * likCut) && --maxIters > 0);
 }
