@@ -63,7 +63,7 @@
 #define PACKAGE_NAME "pialign"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "pialign 0.2.0"
+#define PACKAGE_STRING "pialign 0.2.1"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "pialign"
@@ -72,13 +72,13 @@
 #define PACKAGE_URL ""
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "0.2.0"
+#define PACKAGE_VERSION "0.2.1"
 
 /* Define to 1 if you have the ANSI C header files. */
 #define STDC_HEADERS 1
 
 /* Version number of package */
-#define VERSION "0.2.0"
+#define VERSION "0.2.1"
 
 /* Number of bits in a file offset, on hosts where this is settable. */
 #define _FILE_OFFSET_BITS 64
