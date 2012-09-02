@@ -27,12 +27,13 @@ protected:
     Agendas agendas_; // the current set of bucketed agendas
     int debug_;
     bool useQueue_;
+    bool viterbi_;
     int eLen_, fLen_;
     std::vector< std::vector< std::pair<int,int> > > topLefts_, botLefts_, topRights_, botRights_;
 
 public:
 
-    ParseChart() : std::vector<Prob>(), debug_(0), useQueue_(false) { }
+    ParseChart() : std::vector<Prob>(), debug_(0), useQueue_(false), viterbi_(false) { }
 
     // chart access
     inline int findChartPosition(const Span & s) const {
@@ -43,6 +44,7 @@ public:
     }
 
     void setUseQueue(bool useQueue) { useQueue_ = useQueue; }
+    void setViterbi(bool viterbi) { viterbi_ = viterbi; }
 
     inline std::vector< std::pair<int,int> > & getQueue(std::vector< std::vector< std::pair<int,int> > > & myQueue, int ide, int idf) {
         PRINT_DEBUG("getQueue("<<ide<<", "<<idf<<") == "<<ide*(fLen_+1)+idf<<std::endl, 2);
@@ -79,6 +81,8 @@ public:
             }
             ret = p;
         }
+        else if (viterbi_)
+            ret = std::max((*this)[idx], p);
         else
             ret = addLogProbs((*this)[idx],p);
         (*this)[idx] = ret;

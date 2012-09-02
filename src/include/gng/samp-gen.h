@@ -36,11 +36,7 @@ inline double addLogProbs(const std::vector<double> & probs) {
 }
 inline double addLogProbs(double a, double b) {
     double myMax = std::max(a,b);
-#ifdef VITERBI_ON
-    return myMax;
-#else
     return log(exp(a-myMax)+exp(b-myMax))+myMax;
-#endif
 }
 
 // distribution sampling functions

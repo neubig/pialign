@@ -122,6 +122,7 @@ void PIAlign::loadConfig(int argc, const char** argv) {
             else if(!strcmp(argv[i],"-probwidth"))      probWidth_ = atof(argv[++i]);
             else if(!strcmp(argv[i],"-usequeue"))       useQueue_ = true;
             else if(!strcmp(argv[i],"-noqueue"))        useQueue_ = false;
+            else if(!strcmp(argv[i],"-viterbi"))        viterbi_ = true;
             else if(!strcmp(argv[i],"-defdisc"))        defDisc_ = atof(argv[++i]);
             else if(!strcmp(argv[i],"-defstren"))       defStren_ = atof(argv[++i]);
             else if(!strcmp(argv[i],"-noshuffle"))      shuffle_ = false;
@@ -273,6 +274,7 @@ void PIAlign::loadCorpora() {
     buildJobs_.resize(numThreads_);
     for(int i = 0; i < numThreads_; i++) {
         buildJobs_[i].chart.setUseQueue(useQueue_);
+        buildJobs_[i].chart.setViterbi(viterbi_);
         buildJobs_[i].chart.initialize(maxLen,maxLen);
         buildJobs_[i].pialign = this;
         // -------------------- make the look-ahead -----------------------

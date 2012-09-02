@@ -107,7 +107,8 @@ protected:
     int maxSentLen_;       // the maximum size of a sentence  
     Prob probWidth_;       // the width of the probability beam to use 
     bool useQueue_;        // whether to use a queue or exhaustive search
-    int lookType_;             // which look-ahead to use (default LOOK_NONE)
+    bool viterbi_;         // whether to use viterbi search in the inside step
+    int lookType_;             // which look-ahead to use (default LOOK_IND)
     static const int LOOK_NONE = 0;
     static const int LOOK_IND = 1;
     static const int LOOK_INDADD = 2;
@@ -175,7 +176,8 @@ public:
     PIAlign() : samples_(1), sampRate_(1), burnIn_(9),
         babySteps_(1), babyStepLen_(0), annealSteps_(1), annealStepLen_(0), 
         batchLen_(1), numThreads_(1), shuffle_(true), wordIters_(0),
-        maxPhraseLen_(3), printMax_(7), printMin_(1), maxSentLen_(40), probWidth_(1e-4), useQueue_(false), lookType_(LOOK_IND),
+        maxPhraseLen_(3), printMax_(7), printMin_(1), maxSentLen_(40), probWidth_(1e-4),
+        useQueue_(false), viterbi_(false), lookType_(LOOK_IND),
         modelType_(MODEL_HIER), forceWord_(true), avgPhraseLen_(0.01), nullProb_(0.01), 
         termStrength_(1), termPrior_(1.0/3.0),
         defDisc_(-1), defStren_(-1),
