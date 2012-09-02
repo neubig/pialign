@@ -94,36 +94,41 @@ void BaseModelOne::loadModelOne(const char* e2fFile, WordSymbolSet & eVocab, Wor
         } else if (fId != 0) {
             if(eId) eId+=eBonus;
             fId+=fBonus;
-            conds_.insert(std::pair< WordPairId, Prob>(WordPairHash(fId, eId), c));
+            conds_.insert(std::pair< WordPairId, Prob>(WordPairHash(fId, eId, GlobalVars::maxVocab), c));
             lineCount++;
         }
     }
     std::cerr << " "<<lineCount<<" lines"<<std::endl;
 }
 
-void BaseModelOne::trainModelOne(const Corpus & es, const Corpus & fs, int eSize, int fSize, int sentLen) {
+// Calculate model one probabilities and put them in conds
+//  conds[pair<int,int>(e,f)] = p(e|f)
+void BaseModelOne::trainModelOne(const Corpus & es, 
+                                const Corpus & fs, 
+                                int eSize, int fSize, int sentLen) {
     PairProbMap count;
-    std::vector<Prob> total(fSize+eSize), tBuff(sentLen+1); 
-    std::vector< WordPairId > pBuff(sentLen+1);
+    std::vector<double> total(fSize+eSize), tBuff;
+    std::vector< WordPairId > pBuff;
     // initialize the probability
-    std::cerr << "Training model 1" << std::endl;
+    std::cerr << "Initializing model 1" << std::endl;
     int i,j,k,iter=0;
-    Prob uniProb = 1.0/eSize;
+    double uniProb = 1.0/eSize;
     for(i = 0; i < (int)es.size(); i++) {
         for(j = 0; j < (int)es[i].length(); j++) {
             for(k = 0; k < (int)fs[i].length(); k++) {
-                WordPairId id = WordPairHash(es[i][j], fs[i][k]);
+                WordPairId id = WordPairHash(es[i][j],fs[i][k], GlobalVars::maxVocab);
                 conds_.insert(PairProbMap::value_type(id,uniProb));
                 count.insert(PairProbMap::value_type(id,0.0));
             }
-            WordPairId id = WordPairHash(es[i][j], 0);
+            WordPairId id = WordPairHash(es[i][j],0, GlobalVars::maxVocab);
             conds_.insert(PairProbMap::value_type(id,uniProb));
             count.insert(PairProbMap::value_type(id,0.0));
         }
     }
+    cerr << "Finished initializing, starting training" << endl;
     // train the model
     int maxIters = 100;
-    Prob lastLik = 0.0, likCut = 0.001, sTotal, lik = 0.0, norm;
+    double lastLik = 0.0, likCut = 0.001, sTotal, lik = 0.0, norm;
     do {
         // reset the values
         lastLik = lik;
@@ -133,32 +138,39 @@ void BaseModelOne::trainModelOne(const Corpus & es, const Corpus & fs, int eSize
         fill(total.begin(),total.end(),0.0);
         // E step
         for(i = 0; i < (int)es.size(); i++) {
-            if(es[i].length()*fs[i].length() == 0)
+            const int esSize = es[i].length(), fsSize = fs[i].length();
+            if(esSize*fsSize == 0)
                 continue;
-            for(j = 0; j < (int)es[i].length(); j++) {
+            if((int)pBuff.size() <= fsSize) { 
+                pBuff.resize(fsSize+1); 
+                tBuff.resize(fsSize+1); 
+            }
+            for(j = 0; j < esSize; j++) {
                 sTotal = 0;
                 // do words + null
-                for(k = 0; k < (int)fs[i].length(); k++) {
-                    pBuff[k] = WordPairHash(es[i][j], fs[i][k]);
+                for(k = 0; k < fsSize; k++) {
+                    pBuff[k] = WordPairHash(es[i][j],fs[i][k], GlobalVars::maxVocab);
                     tBuff[k] = conds_.find(pBuff[k])->second;
                     sTotal += tBuff[k];
                 }
-                pBuff[k] = WordPairHash(es[i][j], 0);
+                pBuff[k] = WordPairHash(es[i][j],0, GlobalVars::maxVocab);
                 tBuff[k] = conds_.find(pBuff[k])->second;
                 sTotal += tBuff[k];
                 // likelihood
-                lik += log(sTotal/(fs[i].length()+1));
+                lik += log(sTotal/(fsSize+1));
                 // do words + null
-                for(k = 0; k < (int)fs[i].length()+1; k++) {
+                for(k = 0; k < (int)fsSize+1; k++) {
                     norm = tBuff[k]/sTotal;
                     count[pBuff[k]] += norm;
-                    total[WordPairSecond(pBuff[k])] += norm;
+                    total[WordPairSecond(pBuff[k], GlobalVars::maxVocab)] += norm;
                 }
             }
         }
         // M step
+        //  divide the number of times it->first.second generates it->first.first divided
+        //  by the total number of times it->first.second appears
         for(PairProbMap::iterator it = count.begin(); it != count.end(); it++)
-            conds_[it->first] = it->second/total[WordPairSecond(it->first)];
+            conds_[it->first] = it->second/total[WordPairSecond(it->first, GlobalVars::maxVocab)];
         std::cerr << " Iteration " << ++iter << ": likelihood "<<lik<<std::endl;
     } while((lastLik == 0.0 || (lastLik-lik) < lik * likCut) && --maxIters > 0);
 }

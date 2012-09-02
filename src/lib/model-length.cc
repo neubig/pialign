@@ -29,7 +29,7 @@ Prob LengthModel::addSentence(const WordString & e, const WordString & f, SpanNo
     WordId eId = ePhrases.getId(e.substr(s,t-s),true),
         fId = fPhrases.getId(f.substr(u,v-u),true);
     // get the phrase pair ID and save the base probability if necessary
-    node->phraseid = pairs.getId(WordPairHash(eId, fId),true);
+    node->phraseid = pairs.getId(WordPairHash(eId, fId, GlobalVars::maxPhrase),true);
     int idx = saveIdx(node->phraseid,node->span.length()-1);
     int toAdd = node->type;
     // this is breakdown
@@ -137,7 +137,7 @@ void LengthModel::calcPhraseTable(const PairWordSet & jPhrases, std::vector<Prob
         if(idx || rememberNull_) {
             myProb = sepPhrases_[idx].getProb(it->second,0);
             if(myProb != 0.0) {
-                int first = WordPairFirst(it->first), second = WordPairSecond(it->first);
+                int first = WordPairFirst(it->first, GlobalVars::maxPhrase), second = WordPairSecond(it->first, GlobalVars::maxPhrase);
                 if((int)jProbs.size() <= it->second) jProbs.resize(it->second+1,0);
                 jProbs[it->second] = myProb;
                 if((int)eProbs.size() <= first) eProbs.resize(first+1,0);

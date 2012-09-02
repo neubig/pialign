@@ -52,7 +52,7 @@ public:
         }
             
         // --- print ---
-        if(globalDebug_ >= 2) {
+        if(GlobalVars::globalDebug >= 2) {
             PRINT_DEBUG("Forward:", 2);
             for(int i = 0; i <= len; i++)
                 PRINT_DEBUG(" " << forward[i], 2);
@@ -73,7 +73,7 @@ public:
         }
 
         // --- print ---
-        if(globalDebug_ >= 2) {
+        if(GlobalVars::globalDebug >= 2) {
             PRINT_DEBUG("Backward:", 2);
             for(int i = 0; i <= len; i++)
                 PRINT_DEBUG(" " << backward[i], 2);

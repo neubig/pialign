@@ -25,11 +25,24 @@
 #include <iostream>
 #include <climits>
 
-static int globalDebug_;
+namespace pialign {
+
+typedef unsigned PosId;
+typedef double Prob;
+typedef int NodeId;
+typedef int WordId;
+typedef long long WordPairId;
+
+class GlobalVars {
+public:
+    static int maxVocab;
+    static int maxPhrase;
+    static int globalDebug;
+};
 
 #ifdef DEBUG_ON
 #define PRINT_DEBUG(msg, lev) do {            \
-        if(lev <= globalDebug_)                    \
+        if(lev <= GlobalVars::globalDebug)        \
             std::cerr << msg;                     \
         }                                         \
         while (0);
@@ -56,14 +69,6 @@ static int globalDebug_;
 #define TYPE_INV 2
 #define TYPE_GEN 3
 #define TYPE_BASE 4
-
-namespace pialign {
-
-typedef unsigned PosId;
-typedef double Prob;
-typedef int NodeId;
-typedef int WordId;
-typedef long long WordPairId;
 
 class Edge {
 public:
@@ -199,17 +204,17 @@ typedef std::vector< SpanVec > Agendas;
 typedef std::pair<Prob, Span> ProbSpan;
 typedef std::vector< ProbSpan > ProbSpanVec;
 
-inline WordPairId WordPairHash(WordId e, WordId f) {
-    // cerr << "WordPairHash("<<e<<", "<<f<<") == " << e * (WordPairId) INT_MAX + f << endl;
-    return e * (WordPairId) INT_MAX + f;
+inline WordPairId WordPairHash(WordId e, WordId f, WordId m) {
+    // std::cerr << "WordPairHash("<<e<<", "<<f<<") == " << e * (WordPairId) GlobalVars::maxVocab + f << " (maxVocab=" << GlobalVars::maxVocab<<")" <<std::endl;
+    return e * (WordPairId) m + f;
 }
-inline WordId WordPairFirst(WordPairId p) {
-    // cerr << "WordPairFirst("<<p<<") == " << p / INT_MAX << endl;
-    return p / INT_MAX;
+inline WordId WordPairFirst(WordPairId p, WordId m) {
+    // std::cerr << "WordPairFirst("<<p<<") == " << p / GlobalVars::maxVocab << std::endl;
+    return p / m;
 }
-inline WordId WordPairSecond(WordPairId p) {
-    // cerr << "WordPairSecond("<<p<<") == " << p % INT_MAX << endl;
-    return p % INT_MAX;
+inline WordId WordPairSecond(WordPairId p, WordId m) {
+    // std::cerr << "WordPairSecond("<<p<<") == " << p % GlobalVars::maxVocab << std::endl;
+    return p % m;
 }
 
 

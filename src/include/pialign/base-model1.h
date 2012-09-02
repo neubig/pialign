@@ -27,7 +27,7 @@ public:
 
     // get the conditional probabilitiy
     Prob getCond(WordId e, WordId f) const {
-        PairProbMap::const_iterator it = conds_.find(WordPairHash(e,f));
+        PairProbMap::const_iterator it = conds_.find(WordPairHash(e,f, GlobalVars::maxPhrase));
         return it != conds_.end() ? it->second : MIN_MODEL1_PROB;
     }
 

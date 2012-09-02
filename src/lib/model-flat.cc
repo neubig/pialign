@@ -21,7 +21,7 @@ Prob FlatModel::addSentence(const WordString & e, const WordString & f, SpanNode
         WordId eId = ePhrases.getId(e.substr(s,t-s),true),
             fId = fPhrases.getId(f.substr(u,v-u),true);
         // set the phrase and the pair
-        node->phraseid = pairs.getId(WordPairHash(eId, fId),true);
+        node->phraseid = pairs.getId(WordPairHash(eId, fId, GlobalVars::maxPhrase),true);
         if(node->baseProb != 0) {
             base->add(node->span,node->phraseid,node->baseProb,node->baseElems);
         }

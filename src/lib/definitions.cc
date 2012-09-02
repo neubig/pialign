@@ -1,7 +1,6 @@
-#include <pialign/definitions.h>
+#include "pialign/definitions.h"
 
-namespace pialign {
+int pialign::GlobalVars::maxVocab = -1;
+int pialign::GlobalVars::maxPhrase = 2147483647;
+int pialign::GlobalVars::globalDebug = 0;
 
-int globalDebug_ = 0;
-
-}

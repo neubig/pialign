@@ -218,7 +218,7 @@ public:
         if(it->count == 0) {
             removedTable_ = true;
             lastTable_ = *it;
-            PyTable<T> save = lastTable_;
+            // PyTable<T> save = lastTable_;
             tables_--;
             set.erase(it);
             prob = log(getFallbackProb());

@@ -10,7 +10,7 @@ Prob HierModel::addSentence(const WordString & e, const WordString & f, SpanNode
     int s=mySpan.es,t=mySpan.ee,u=mySpan.fs,v=mySpan.fe;
     WordId eId = ePhrases.getId(e.substr(s,t-s),true),
         fId = fPhrases.getId(f.substr(u,v-u),true);
-    node->phraseid = pairs.getId(WordPairHash(eId, fId),true);
+    node->phraseid = pairs.getId(WordPairHash(eId, fId, GlobalVars::maxPhrase),true);
     int toAdd = node->type;
     // handle either non-terminals or terminals
     Prob rightProb = 0, leftProb = 0;
