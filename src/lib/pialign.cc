@@ -762,8 +762,8 @@ void PIAlign::printPhraseTable(ostream & ptos) {
             if((int)estr.length() <= printMax_ && (int)fstr.length() <= printMax_ 
                 && (int)estr.length() >= printMin_ && (int)fstr.length() >= printMin_) {
                 printSpan(estr,fstr,Span(0,estr.length(),0,fstr.length()), ptos," ||| "," ","","");
-                ptos << " ||| " << jProbs[it->second]/fProbs[WordPairFirst(it->first, GlobalVars::maxPhrase)] <<
-                        " " << jProbs[it->second]/eProbs[WordPairSecond(it->first, GlobalVars::maxPhrase)] <<
+                ptos << " ||| " << jProbs[it->second]/fProbs[WordPairSecond(it->first, GlobalVars::maxPhrase)] <<
+                        " " << jProbs[it->second]/eProbs[WordPairFirst(it->first, GlobalVars::maxPhrase)] <<
                         " " << jProbs[it->second] <<
                         " " << dProbs[it->second];
                 // if we are using model one, output lexical translation probabilities as well
