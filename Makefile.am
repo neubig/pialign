@@ -1,6 +1,6 @@
 SUBDIRS = src
 
-dist_pkglib_SCRIPTS = \
+dist_pkglibexec_SCRIPTS = \
 script/aer.pl \
 script/countnull.pl \
 script/extractlex.pl \
