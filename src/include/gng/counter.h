@@ -15,7 +15,7 @@ public:
     typedef typename Counter<Key,T>::iterator iterator;
 
     T inc(const Key & s, T weight=1) {
-        iterator it = find(s);
+        iterator it = this->find(s);
         if(it == this->end()) {
             if(weight < 0)
                 throw std::runtime_error("Negative counter");

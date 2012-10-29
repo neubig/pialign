@@ -29,6 +29,7 @@
 
 #include <vector>
 #include <cassert>
+#include <utility>
 #include "sais.hxx"
 
 namespace esaxx_private {
