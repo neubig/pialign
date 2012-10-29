@@ -61,7 +61,7 @@ index_type suffixtree(string_type T, sarray_type SA, sarray_type L, sarray_type 
   H[0] = -1;
 
   std::vector<std::pair<index_type, index_type> > S;
-  S.push_back(make_pair((index_type)-1, (index_type)-1));
+  S.push_back(std::make_pair((index_type)-1, (index_type)-1));
   size_t nodeNum = 0;
   for (index_type i = 0; ; ++i){
     std::pair<index_type, index_type> cur (i, (i == n) ? -1 : H[i]);
@@ -81,7 +81,7 @@ index_type suffixtree(string_type T, sarray_type SA, sarray_type L, sarray_type 
       S.push_back(cur);
     }
     if (i == n) break;
-    S.push_back(make_pair(i, n - SA[i] + 1));
+    S.push_back(std::make_pair(i, n - SA[i] + 1));
   }
   return nodeNum;
 }
