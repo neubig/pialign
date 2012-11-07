@@ -15,4 +15,5 @@ script/phrase-extract.pl \
 script/removezerophrase.pl \
 script/reversealign.pl \
 script/time.pl \
+script/make-moses-config.pl \
 script/visualize.pl
