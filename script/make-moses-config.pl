@@ -14,12 +14,14 @@ my $TM_BINARY = 0;
 my $LM_ORDER = 5;
 my $DM_FILE = undef;
 my $result = GetOptions (
-    "tm-order" => \$TM_ORDER,   # The maximum length of a phrase in the TM
-    "tm-binary" => \$TM_BINARY, # 1 if the TM is binary, otherwise 0
-    "tm-feats" => \$TM_FEATS,   # 1 if the TM is binary, otherwise 0
-    "dm-file" => \$DM_FILE,     # The distortion model file, if it exists
-    "lm-order" => \$LM_ORDER,   # The n-gram order of the language model
+    "tm-order=s" => \$TM_ORDER,   # The maximum length of a phrase in the TM
+    "tm-binary=s" => \$TM_BINARY, # 1 if the TM is binary, otherwise 0
+    "tm-feats=s" => \$TM_FEATS,   # 1 if the TM is binary, otherwise 0
+    "dm-file=s" => \$DM_FILE,     # The distortion model file, if it exists
+    "lm-order=s" => \$LM_ORDER,   # The n-gram order of the language model
 ); # flag
+
+print STDERR "@ARGV\n";
 
 if(@ARGV != 2) {
     print STDERR "Usage: $0 TM_FILE LM_FILE\n";
@@ -29,7 +31,7 @@ my $TM_FILE = $ARGV[0];
 my $LM_FILE = $ARGV[1];
 
 # The weights of the distortion model
-my $dm_weights = join("\n", map { 0.3 } (1 .. ($DM_FILE ? 1 : 7)));
+my $dm_weights = join("\n", map { 0.3 } (1 .. ($DM_FILE ? 7 : 1)));
 my $tm_weights = join("\n", map { 0.2 } (1 .. $TM_ORDER));
 
 print "
