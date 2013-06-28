@@ -29,6 +29,8 @@ for(@ARGV) {
         $fes{$fe} = [0,0] if not $fes{$fe};
         $fes{$fe}->[0] += $scores[2];
         $fes{$fe}->[1] += $scores[3];
+        $fes{$fe}->[2] = $scores[4];
+        $fes{$fe}->[3] = $scores[5];
         $fs[$f] += $scores[2];
         $es[$e] += $scores[2];
     }
@@ -38,5 +40,5 @@ for(@ARGV) {
 my $exp1 = exp(1);
 while(my ($k,$v) = each(%fes)) {
     my ($f,$e) = split(/-/,$k);
-    printf ("%s ||| %s ||| %.6g %.6g %.6g %.6g %.6g\n", $strs[$f], $strs[$e], ($v->[0]/$es[$e]), ($v->[0]/$fs[$f]), ($v->[0]/@ARGV), ($v->[1]/@ARGV), $exp1);
+    printf ("%s ||| %s ||| %.6g %.6g %.6g %.6g %.6g %.6g %.6g\n", $strs[$f], $strs[$e], ($v->[0]/$es[$e]), ($v->[0]/$fs[$f]), ($v->[0]/@ARGV), ($v->[1]/@ARGV), $v->[2], $v->[3], $exp1);
 }
