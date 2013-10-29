@@ -1,14 +1,14 @@
 #ifndef COUNTER_H__
 #define COUNTER_H__
 
-#include <tr1/unordered_map>
+#include "port/port.h"
 #include <stdexcept>
 #include <string>
 
 namespace gng {
 
 template <class Key,class T>
-class Counter : public std::tr1::unordered_map<Key,T> {
+class Counter : public std::unordered_map<Key,T> {
 
 
 public:

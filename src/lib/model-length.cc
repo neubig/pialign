@@ -2,7 +2,6 @@
 #include "pialign/model-length.h"
 
 using namespace std;
-using namespace std::tr1;
 using namespace pialign;
 using namespace gng;
 
