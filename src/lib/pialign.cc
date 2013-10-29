@@ -23,12 +23,11 @@
 #include "pialign/compress_stream.hpp"
 #endif
 
-#ifdef HAVE_CONFIG_H 
+#ifdef HAVE_CONFIG_H
 #include "pialign/config.h"
 #endif
 
 using namespace std;
-using namespace std::tr1;
 using namespace pialign;
 using namespace gng;
 

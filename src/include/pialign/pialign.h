@@ -9,7 +9,6 @@
 #include "pialign/look-base.h"
 #include "gng/string.h"
 #include "gng/symbol-set.h"
-#include <tr1/unordered_map>
 #include <algorithm>
 #include <fstream>
 #include <iostream>

@@ -12,8 +12,7 @@
 // enables compression
 // #define COMPRESS_ON
 
-#include <tr1/unordered_set>
-#include <tr1/unordered_map>
+#include "port/port.h"
 #include "gng/string.h"
 #include "gng/symbol-set.h"
 #include "gng/symbol-map.h"
@@ -196,11 +195,11 @@ public:
 
 typedef gng::SymbolSet< std::string, WordId > WordSymbolSet;
 typedef gng::SymbolSet< WordPairId, WordId > PairWordSet;
-typedef std::tr1::unordered_map< WordPairId, Prob > PairProbMap;
+typedef std::unordered_map< WordPairId, Prob > PairProbMap;
 typedef gng::SymbolMap< Span, int, SpanHash > SpanSymbolMap;
 typedef std::vector< Span > SpanVec;
-typedef std::tr1::unordered_set< Span, SpanHash > SpanSet;
-typedef std::vector< SpanVec > Agendas; 
+typedef std::unordered_set< Span, SpanHash > SpanSet;
+typedef std::vector< SpanVec > Agendas;
 typedef std::pair<Prob, Span> ProbSpan;
 typedef std::vector< ProbSpan > ProbSpanVec;
 
@@ -305,10 +304,10 @@ public:
 
 };
 
-class SpanProbMap : public std::tr1::unordered_map< Span, Prob, SpanHash > {
+class SpanProbMap : public std::unordered_map< Span, Prob, SpanHash > {
 public:
 
-    SpanProbMap() : std::tr1::unordered_map< Span, Prob, SpanHash >() { }
+    SpanProbMap() : std::unordered_map< Span, Prob, SpanHash >() { }
     virtual ~SpanProbMap() { }
 
     Prob getProb(const Span & mySpan) const {

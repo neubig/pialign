@@ -39,7 +39,7 @@ public:
     }
 
     std::vector<Prob> getAllProbs() const {
-        std::vector<Prob> ret();
+        std::vector<Prob> ret;
         for(T i = 0; i < ret.size(); i++)
             ret[i] = getProb(i);
         return ret;

@@ -61,10 +61,10 @@ template < class T >
 class PySparseIndex {
 protected:
     typedef PyTableSet<T> TSet;
-    std::tr1::unordered_map< int, TSet > idx_;
+    std::unordered_map< int, TSet > idx_;
 public:
-    typedef typename std::tr1::unordered_map< int, TSet >::const_iterator const_iterator;
-    typedef typename std::tr1::unordered_map< int, TSet >::iterator iterator;
+    typedef typename std::unordered_map< int, TSet >::const_iterator const_iterator;
+    typedef typename std::unordered_map< int, TSet >::iterator iterator;
     iterator begin() { return idx_.begin(); }
     iterator end() { return idx_.end(); }
     TSet & iterTableSet(iterator it) { return it->second; }
