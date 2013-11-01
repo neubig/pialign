@@ -1,7 +1,8 @@
 
 AM_CPPFLAGS = -I$(srcdir)/../include
 
-bin_PROGRAMS = test-pialign test-trie
+check_PROGRAMS = test-pialign test-trie
+TESTS = test-pialign test-trie
 
 test_pialign_SOURCES = maintest-pialign.cc
 test_pialign_LDADD = ../lib/libpialign.la
