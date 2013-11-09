@@ -49,14 +49,14 @@ int testFind() {
     if(!trie.insert("babino",6,5)) { return er("testFind", "insert babino"); }
     if(!trie.insert("babel",5,6)) { return er("testFind", "insert babel"); }
 
-    if(!trie.findValue("abracadabra",11) == 1) { return er("testFind", "find abracadabra"); }
-    if(!trie.findValue("abs",3) == 2) { return er("testFind", "find abs"); }
-    if(!trie.findValue("babies",6) == 3) { return er("testFind", "find babies"); }
-    if(!trie.findValue("baby",4) == 4) { return er("testFind", "find baby"); }
-    if(!trie.findValue("babino",6) == 5) { return er("testFind", "find babino"); }
-    if(!trie.findValue("babel",5) == 6) { return er("testFind", "find babel"); }
-    if(!trie.findValue("bab",3) == -1) { return er("testFind", "find bab"); }
-    if(!trie.findValue("babys",5) == -1) { return er("testFind", "find babys"); }
+    if(trie.findValue("abracadabra",11) != 1) { return er("testFind", "find abracadabra"); }
+    if(trie.findValue("abs",3) != 2) { return er("testFind", "find abs"); }
+    if(trie.findValue("babies",6) != 3) { return er("testFind", "find babies"); }
+    if(trie.findValue("baby",4) != 4) { return er("testFind", "find baby"); }
+    if(trie.findValue("babino",6) != 5) { return er("testFind", "find babino"); }
+    if(trie.findValue("babel",5) != 6) { return er("testFind", "find babel"); }
+    if(trie.findValue("bab",3) != -1) { return er("testFind", "find bab"); }
+    if(trie.findValue("babys",5) != -1) { return er("testFind", "find babys"); }
 
     return er("testFind", 0);
 
