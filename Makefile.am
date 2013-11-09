@@ -1,4 +1,5 @@
 SUBDIRS = src
+AUTOMAKE_OPTIONS = foreign
 
 dist_pkglibexec_SCRIPTS = \
 script/aer.pl \
