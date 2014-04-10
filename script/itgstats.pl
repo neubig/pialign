@@ -22,7 +22,7 @@ binmode STDOUT, ":utf8";
 #         1-1 words, 1-many blocks, or many-many phrases respectively
 
 if(@ARGV < 1) {
-    print STDERR "Usage: itgstats.pl merge|block|lex|phrase|align|palign|balign [MAX_LENGTH=7] [OPTIONS]\n";
+    print STDERR "Usage: itgstats.pl merge|block|lex|phrase|align|palign|balign|talign|salign [MAX_LENGTH=7] [OPTIONS]\n";
     exit 1;
 }
 
@@ -32,6 +32,8 @@ my $OPT1 = $ARGV[2] ? $ARGV[2] : 0.5;
 my $MINLEN = 1;
 my $MERGE = (($TYPE eq "merge") or ($TYPE eq "palign"));
 my $BLOCK = (($TYPE eq "block") or ($TYPE eq "balign"));
+my $TRGONE = $TYPE eq "talign";
+my $SRCONE = $TYPE eq "salign";
 
 my (%fe, %phrases);
 
@@ -108,7 +110,7 @@ sub buildtree {
     my $phrase = $lf.((length($lf) and length($rf))?" ":"").$rf." ||| ".($t==1?$le:$re).((length($le) and length($re))?" ":"").($t==1?$re:$le);
     my $ret =  [ $t, -1, -1, $l->[3]+$r->[3], $l->[4]+$r->[4], $phrase, $l, $r ];
     # throw away children if this is to be merged
-    if($inphrase and ($MERGE or ($BLOCK and (min($ret->[3],$ret->[4]) <= 1)) or max($ret->[3],$ret->[4]) == 1)) {
+    if($inphrase and ($MERGE or ($BLOCK and (min($ret->[3],$ret->[4]) <= 1)) or ($TRGONE and ($ret->[4] <= 1)) or ($SRCONE and ($ret->[3] <= 1)) or max($ret->[3],$ret->[4]) == 1)) {
         pop @$ret; pop @$ret; 
         $ret->[0] = 0;
     }
@@ -218,7 +220,7 @@ while(<STDIN>) {
         print "\n";
     } elsif($TYPE eq "phrase") {
         countphrase($root);
-    } elsif($TYPE =~ /^[pb]?align$/) {
+    } elsif($TYPE =~ /^[pbts]?align$/) {
         $first = 1;
         printalign($root);
         print "\n";
