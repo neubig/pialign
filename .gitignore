@@ -23,3 +23,13 @@ src/bin/pialign
 src/include/pialign/config.h.in
 src/test/test-pialign
 src/test/test-trie
+Makefile.pre
+Misc/
+Modules/
+build/
+libpython3.3m.a
+pybuilddir.txt
+pyconfig.h
+python
+src/include/pialign/stamp-h1
+
