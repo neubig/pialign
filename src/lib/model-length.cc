@@ -2,11 +2,13 @@
 #include "pialign/model-length.h"
 
 using namespace std;
+using namespace std::tr1;
 using namespace pialign;
 using namespace gng;
 
 
-void LengthModel::setMaxLen(int maxLen) {
+void LengthModel::setMaxLen(int maxLenE, int maxLenF) {
+    int maxLen = max(maxLenE,maxLenF);
     sepPhrases_ = std::vector< PyDist< WordId,PySparseIndex<WordId> > >(maxLen*2, PyDist< WordId,PySparseIndex<WordId> >(1.0,0.95));
     sepFor_ = std::vector< DirichletDist<int> >(maxLen*2,DirichletDist<int>(1.0,2)) ;
     sepTerm_ = std::vector< DirichletDist<int> >(maxLen*2,DirichletDist<int>(1.0,2)); 

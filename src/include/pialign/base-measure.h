@@ -11,10 +11,13 @@ class BaseMeasure {
 
 protected:
 
-    Prob avgLen_;
-    int maxLen_;
+    Prob avgLen_e_;
+    Prob avgLen_f_;
+    int maxLen_e_;
+    int maxLen_f_;
 
-    std::vector<Prob> poisProbs_;
+    std::vector<Prob> poisProbs_e_;
+    std::vector<Prob> poisProbs_f_;
     std::vector<Prob> unigrams_;
     std::vector<Prob> baseProbs_;
     std::vector< std::vector<Prob> > baseElems_;
@@ -46,20 +49,31 @@ public:
     //  by fallbacks, etc in the model, chart is the overall chart
     virtual SpanProbMap * getBaseChart(const WordString & e, const WordString & f) const = 0;
 
-    virtual void trainPoisson(Prob avgLen, Prob nullProb) {
+    virtual void trainPoisson(Prob avgLenE, Prob nullProbE, Prob avgLenF, Prob nullProbF) {
 
-        // initialize poisson probabilities
+        // initialize poisson probabilities (E side)
         Prob poisSum = 0.0;
-        poisProbs_.resize(maxLen_+1,0);
-        poisProbs_[0] = exp(-1*avgLen);
-        for(int i = 1; i <= maxLen_; i++) 
-            poisProbs_[i] = poisProbs_[i-1] * avgLen / i;
-        for(int i = 1; i <= maxLen_; i++)
-            poisSum += poisProbs_[i];
-        for(int i = 1; i <= maxLen_; i++)
-            poisProbs_[i] = log(poisProbs_[i]/poisSum*(1-nullProb));
-        poisProbs_[0] = log(nullProb); 
+        poisProbs_e_.resize(maxLen_e_+1,0);
+        poisProbs_e_[0] = exp(-1*avgLenE);
+        for(int i = 1; i <= maxLen_e_; i++) 
+            poisProbs_e_[i] = poisProbs_e_[i-1] * avgLenE / i;
+        for(int i = 1; i <= maxLen_e_; i++)
+            poisSum += poisProbs_e_[i];
+        for(int i = 1; i <= maxLen_e_; i++)
+            poisProbs_e_[i] = log(poisProbs_e_[i]/poisSum*(1-nullProbE));
+        poisProbs_e_[0] = log(nullProbE); 
 
+        // initialize poisson probabilities (F side)
+        poisSum = 0.0;
+        poisProbs_f_.resize(maxLen_f_+1,0);
+        poisProbs_f_[0] = exp(-1*avgLenF);
+        for(int i = 1; i <= maxLen_f_; i++) 
+            poisProbs_f_[i] = poisProbs_f_[i-1] * avgLenF / i;
+        for(int i = 1; i <= maxLen_f_; i++)
+            poisSum += poisProbs_f_[i];
+        for(int i = 1; i <= maxLen_f_; i++)
+            poisProbs_f_[i] = log(poisProbs_f_[i]/poisSum*(1-nullProbF));
+        poisProbs_f_[0] = log(nullProbF); 
     }
 
     virtual void trainUnigrams(const Corpus & es, int eSize, const Corpus & fs, int fSize) {
@@ -82,8 +96,9 @@ public:
 //
 //    }
     virtual void setDebug(int debug) { debug_ = debug; }
-    virtual void setMaxLen(int maxLen) { maxLen_ = maxLen; }
-    virtual int getMaxLen() const { return maxLen_; }
+    virtual void setMaxLen(int maxLenE, int maxLenF) { maxLen_e_ = maxLenE; maxLen_f_ = maxLenF; }
+    virtual int getMaxLenE() const { return maxLen_e_; }
+    virtual int getMaxLenF() const { return maxLen_f_; }
 
     virtual void add(Span & span, WordId pid, Prob baseProb, const std::vector<Prob> & baseElems) {
         if((int)baseProbs_.size() <= pid) {

@@ -5,11 +5,12 @@ using namespace pialign;
 using namespace std;
 
 void BaseModelOne::combineBases(const WordString & e, const WordString & f, std::vector<Prob> & probs) const {
+    int maxLen_ = max(maxLen_e_, maxLen_f_);
     int I = e.length(), J = f.length()+1, myMax = I*J*(maxLen_+1);
     if((int)probs.size() < myMax) probs.resize(myMax);
     fill(probs.begin(),probs.begin()+myMax,0);
     for(int i = 0; i < I; i++) {
-        Prob* base = &probs[i*J*(maxLen_+1)+J];
+        Prob* base = &probs[i*J*(maxLen_e_+1)+J];
         int myE = e[i];
         Prob nullProb = getCond(myE,0);
         for(int j = 0; j < J-1; j++) {
@@ -19,7 +20,7 @@ void BaseModelOne::combineBases(const WordString & e, const WordString & f, std:
             PRINT_DEBUG("combineBases("<<i<<","<<j<<") == "<<base[j]<<std::endl, 2)
         }
         base[-1] = nullProb;
-        for(int l = 1; l < maxLen_; l++)
+        for(int l = 1; l < maxLen_f_; l++)
             for(int j = 0; j < J-l-1; j++) {
                 PRINT_DEBUG("combineBases("<<i<<","<<j<<","<<l<<") == "<<base[j]<<std::endl, 2);
                 base[j+l*J] = (base[j+(l-1)*J]*l+base[j+l])/(l+1);
@@ -36,33 +37,34 @@ SpanProbMap * BaseModelOne::getBaseChart(const WordString & e, const WordString 
     int T = e.length(), V = f.length();
     Prob l2 = log(2);
     Prob eProb, fProb, noSym, fm1;
+    int maxLen_ = max(maxLen_e_, maxLen_f_);
     std::vector<Prob> em1s((V+1)*(maxLen_+1));
     std::vector<Prob> eComb, fComb;
     combineBases(e,f,eComb); combineBases(f,e,fComb);
     for(int s = 0; s <= T; s++) {
         eProb = 0;
         fill(em1s.begin(),em1s.end(),0.0);
-        int actT = std::min(s+maxLen_,T);
+        int actT = std::min(s+maxLen_e_,T);
         for(int t = s; t <= actT; t++) {
             if(t != s) eProb += unigrams_[e[t-1]];
             for(int u = 0; u <= V; u++) {
                 fProb = 0; fm1 = 0;
-                int actV = std::min(u+maxLen_,V);
+                int actV = std::min(u+maxLen_f_,V);
                 for(int v = (s==t?u+1:u); v <= actV; v++) {
                     if(u != v) {
                         fProb += unigrams_[f[v-1]];
-                        fm1 += fComb[(v-1)*(T+1)*(maxLen_+1)+(t-s)*(T+1)+s];
+                        fm1 += fComb[(v-1)*(T+1)*(maxLen_f_+1)+(t-s)*(T+1)+s];
                     }
                     Prob em1 = 0;
                     if(s != t) 
-                        em1 = (em1s[v*(maxLen_+1)+v-u] += eComb[(t-1)*(V+1)*(maxLen_+1)+(v-u)*(V+1)+u]);
+                        em1 = (em1s[v*(maxLen_+1)+v-u] += eComb[(t-1)*(V+1)*(maxLen_e_+1)+(v-u)*(V+1)+u]);
                     Span mySpan(s,t,u,v);
                     // add model one probabilities 
                     if(geometric_) 
-                        noSym = (em1+fProb+fm1+eProb)/2+poisProbs_[t-s]+poisProbs_[v-u];
+                        noSym = (em1+fProb+fm1+eProb)/2+poisProbs_e_[t-s]+poisProbs_f_[v-u];
                     else 
-                        noSym = addLogProbs(em1+fProb,fm1+eProb)-l2+poisProbs_[t-s]+poisProbs_[v-u];
-                    PRINT_DEBUG("calcBaseProb @ "<<mySpan<<", addLogProbs("<<em1<<"+"<<fProb<<","<<fm1<<"+"<<eProb<<")+"<<poisProbs_[t-s]<<"+"<<poisProbs_[v-u]<<") == "<<noSym<<" --> "<<noSym<<std::endl, 2);
+                        noSym = addLogProbs(em1+fProb,fm1+eProb)-l2+poisProbs_e_[t-s]+poisProbs_f_[v-u];
+                    PRINT_DEBUG("calcBaseProb @ "<<mySpan<<", addLogProbs("<<em1<<"+"<<fProb<<","<<fm1<<"+"<<eProb<<")+"<<poisProbs_e_[t-s]<<"+"<<poisProbs_f_[v-u]<<") == "<<noSym<<" --> "<<noSym<<std::endl, 2);
                     baseChart->insertProb(mySpan,noSym); // add to the base chart
                 }
             }
