@@ -23,11 +23,12 @@
 #include "pialign/compress_stream.hpp"
 #endif
 
-#ifdef HAVE_CONFIG_H
+#ifdef HAVE_CONFIG_H 
 #include "pialign/config.h"
 #endif
 
 using namespace std;
+using namespace std::tr1;
 using namespace pialign;
 using namespace gng;
 
@@ -58,7 +59,11 @@ cerr << " A tool for unsupervised Bayesian alignment using phrase-based ITGs" <<
 << "" << endl
 << " -model        Model type (hier/len/flat, default: hier)" << endl
 << "" << endl
-<< " -avgphraselen A parameter indicating the expected length of a phrase." << endl
+<< " -avgphraselen A parameter indicating the expected length for both sides." << endl
+<< "               def. is small (0.01) to prevent overly long alignments" << endl
+<< " -avgphraselenE A parameter indicating the expected length of an english phrase." << endl
+<< "               def. is small (0.01) to prevent overly long alignments" << endl
+<< " -avgphraselenF A parameter indicating the expected length of a french phrase." << endl
 << "               def. is small (0.01) to prevent overly long alignments" << endl
 << " -base         The type of base measure to use." << endl
 << "               'm1g'=geometric mean of model 1 (default)" << endl
@@ -68,7 +73,9 @@ cerr << " A tool for unsupervised Bayesian alignment using phrase-based ITGs" <<
 << " -coocdisc     How much to discount for -base coocll (def. 1.0)" << endl
 << " -defstren     Fixed strength of the PY process (def. none)" << endl
 << " -defdisc      Fixed discount of the PY process (def. none)" << endl
-<< " -nullprob     The probability of a null alignment (def. 0.01)" << endl
+<< " -nullprob     The probability of a null alignment (both sides) (def. 0.01)" << endl
+<< " -nullprobE    The probability of a null alignment (E side) (def. 0.01)" << endl
+<< " -nullprobF    The probability of a null alignment (F side) (def. 0.01)" << endl
 << " -noremnull    Do not remember nulls in the phrase table" << endl
 << " -termprior    The prior probability of generating a terminal (0.33)" << endl
 << " -termstren    Strength of the type distribution (def. 1)" << endl
@@ -80,6 +87,8 @@ cerr << " A tool for unsupervised Bayesian alignment using phrase-based ITGs" <<
 << "~~~ Phrase Table ~~~" << endl
 << "" << endl
 << " -maxphraselen Maximum length of a minimal phrase (def. 7)" << endl
+<< " -maxphraselenE Maximum length of a minimal phrase (English side) (def. 7)" << endl
+<< " -maxphraselenF Maximum length of a minimal phrase (French side) (def. 7)" << endl
 << " -maxsentlen   Maximum length of sentences to use (def. 40)" << endl
 << " -printmax     Maximum length of phrases included in the phrase table (def. 7)" << endl
 << " -printmin     Minimal length of phrases included in the phrase table (def. 1)" << endl
@@ -111,10 +120,20 @@ void PIAlign::loadConfig(int argc, const char** argv) {
     for(i = 1; i < argc; i++) {
         if(argv[i][0] == '-') {
             if(!strcmp(argv[i],"-samps"))               samples_ = atoi(argv[++i]);
-            else if(!strcmp(argv[i],"-maxphraselen"))   maxPhraseLen_ = atoi(argv[++i]);
+            else if(!strcmp(argv[i],"-maxphraselenE"))   maxPhraseLen_e_ = atoi(argv[++i]);
+            else if(!strcmp(argv[i],"-maxphraselenF"))   maxPhraseLen_f_ = atoi(argv[++i]);
+            else if(!strcmp(argv[i],"-maxphraselen"))   {
+                maxPhraseLen_e_ = atoi(argv[++i]);
+                maxPhraseLen_f_ = maxPhraseLen_e_;
+            }
             else if(!strcmp(argv[i],"-printmax"))       printMax_ = atoi(argv[++i]);
             else if(!strcmp(argv[i],"-printmin"))       printMin_ = atoi(argv[++i]);
-            else if(!strcmp(argv[i],"-avgphraselen"))   avgPhraseLen_ = atof(argv[++i]);
+            else if(!strcmp(argv[i],"-avgphraselenE"))  avgPhraseLen_e_ = atof(argv[++i]);
+            else if(!strcmp(argv[i],"-avgphraselenF"))  avgPhraseLen_f_ = atof(argv[++i]);
+            else if(!strcmp(argv[i],"-avgphraselen"))   {
+                avgPhraseLen_e_ = atof(argv[++i]);
+                avgPhraseLen_f_ = avgPhraseLen_e_;
+            }
             else if(!strcmp(argv[i],"-maxsentlen"))     maxSentLen_ = atoi(argv[++i]);
             else if(!strcmp(argv[i],"-burnin"))         burnIn_ = atoi(argv[++i]);
             else if(!strcmp(argv[i],"-samprate"))       sampRate_ = atoi(argv[++i]);
@@ -174,7 +193,12 @@ void PIAlign::loadConfig(int argc, const char** argv) {
                 }
             }
             else if(!strcmp(argv[i],"-coocdisc"))       coocDisc_ = atof(argv[++i]);
-            else if(!strcmp(argv[i],"-nullprob"))       nullProb_ = atof(argv[++i]);
+            else if(!strcmp(argv[i],"-nullprobE"))      nullProb_e_ = atof(argv[++i]);
+            else if(!strcmp(argv[i],"-nullprobF"))      nullProb_f_ = atof(argv[++i]);
+            else if(!strcmp(argv[i],"-nullprob"))       {
+                nullProb_e_ = atof(argv[++i]);
+                nullProb_f_ = nullProb_e_;
+            }
             else if(!strcmp(argv[i],"-termstren"))      termStrength_ = atof(argv[++i]);
             else if(!strcmp(argv[i],"-termprior"))      termPrior_ = atof(argv[++i]);
             else {
@@ -205,7 +229,9 @@ void PIAlign::loadConfig(int argc, const char** argv) {
         dieOnHelp("Must specify the foreign file, english file, and output prefix");
     if(probWidth_ < 0 || probWidth_ >= 1)
         dieOnHelp("Probability width must be between zero and one!");
-    if(nullProb_ <= 0 || nullProb_ >= 1)
+    if(nullProb_e_ <= 0 || nullProb_e_ >= 1)
+        dieOnHelp("Null probability must be between zero and one!");
+    if(nullProb_f_ <= 0 || nullProb_f_ >= 1)
         dieOnHelp("Null probability must be between zero and one!");
 #ifndef MONOTONIC_ON
     if(monotonic_)
@@ -251,15 +277,18 @@ void PIAlign::loadCorpora() {
     loadCorpus(fCorpus_, fFile_, fVocab_, eVocab_.size());
     GlobalVars::maxVocab = fVocab_.size() + eVocab_.size() + 1;
     // remove sentences that are too long
-    int total = 0, maxLen = 0;
+    int total = 0, maxLenE = 0, maxLenF = 0; 
     for(unsigned i = 0; i < eCorpus_.size(); i++) {
-        int myLen = max(eCorpus_[i].length(),fCorpus_[i].length());
-        if(myLen > maxSentLen_) {
+        //int myLen = max(eCorpus_[i].length(),fCorpus_[i].length());
+        int myLenE = eCorpus_[i].length();
+        int myLenF = fCorpus_[i].length();
+        if((myLenE > maxSentLen_) || (myLenF > maxSentLen_)) {
             eCorpus_[i].setLength(0);
             fCorpus_[i].setLength(0);
         } else {
             total++;
-            maxLen = max(myLen,maxLen);
+            maxLenE = max(myLenE,maxLenE);
+            maxLenF = max(myLenF,maxLenF);
         }
     }
     if(eCorpus_.size() != fCorpus_.size())
@@ -274,7 +303,7 @@ void PIAlign::loadCorpora() {
     for(int i = 0; i < numThreads_; i++) {
         buildJobs_[i].chart.setUseQueue(useQueue_);
         buildJobs_[i].chart.setViterbi(viterbi_);
-        buildJobs_[i].chart.initialize(maxLen,maxLen);
+        buildJobs_[i].chart.initialize(maxLenE,maxLenF);
         buildJobs_[i].pialign = this;
         // -------------------- make the look-ahead -----------------------
         // make the look-ahead
@@ -286,7 +315,7 @@ void PIAlign::loadCorpora() {
                 ((LookAheadInd*)buildJobs_[i].lookAhead)->setAdd(true);
         }
     }
-	model_->setMaxLen(maxLen);
+	model_->setMaxLen(maxLenE, maxLenF);
 
 }
 
@@ -323,8 +352,8 @@ void PIAlign::initialize() {
     else
         base_ = new BaseUnigram();
     base_->trainUnigrams(eCorpus_, eVocab_.size(), fCorpus_, fVocab_.size());
-    base_->setMaxLen(1);
-    base_->trainPoisson(avgPhraseLen_, nullProb_);
+    base_->setMaxLen(1,1);
+    base_->trainPoisson(avgPhraseLen_e_, nullProb_e_, avgPhraseLen_f_, nullProb_f_);
     
 }
 
@@ -346,10 +375,10 @@ inline Prob getModelOne(const PairProbMap & model1, WordId e, WordId f) {
 // add the generative probabilities
 //  note the the genChart returned should contain generative prob + any symbols (TERM) needed to generate it
 void PIAlign::addGenerativeProbs(const WordString & e, const WordString & f, ParseChart & chart, SpanProbMap & genChart) const {
-    int maxLen = (modelType_ == MODEL_FLAT ? maxPhraseLen_ : (int)e.length());
-    std::vector< LabeledEdge > eEdges = ePhrases_.findEdges(e,maxLen);
-    maxLen = (modelType_ == MODEL_FLAT ? maxPhraseLen_ : (int)f.length());
-    std::vector< LabeledEdge > fEdges = fPhrases_.findEdges(f,maxLen);
+    int maxLenE = (modelType_ == MODEL_FLAT ? maxPhraseLen_e_ : (int)e.length());
+    std::vector< LabeledEdge > eEdges = ePhrases_.findEdges(e,maxLenE);
+    int maxLenF = (modelType_ == MODEL_FLAT ? maxPhraseLen_f_ : (int)f.length());
+    std::vector< LabeledEdge > fEdges = fPhrases_.findEdges(f,maxLenF);
     for(int i = 0; i < (int)eEdges.size(); i++) {
         const LabeledEdge & ee = eEdges[i];
         for(int j = 0; j < (int)fEdges.size(); j++) {
@@ -857,8 +886,8 @@ void PIAlign::train() {
 
         // finish word iterations
         if(iter == wordIters_+1) {
-            base_->setMaxLen(maxPhraseLen_);
-            base_->trainPoisson(avgPhraseLen_, nullProb_);
+            base_->setMaxLen(maxPhraseLen_e_, maxPhraseLen_f_);
+            base_->trainPoisson(avgPhraseLen_e_, nullProb_e_, avgPhraseLen_f_, nullProb_f_);
         }
 
         // get info about this iteration
