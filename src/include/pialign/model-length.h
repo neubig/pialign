@@ -23,7 +23,7 @@ public:
 		
 	}
 	
-	void setMaxLen(int maxLen);
+	void setMaxLen(int maxLenE, int maxLenF);
     
     Prob calcSentProb(const Span & mySpan) const { return sentPen_; }
     bool isHierarchical() { return true; }

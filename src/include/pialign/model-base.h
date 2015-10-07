@@ -16,7 +16,8 @@ class ProbModel {
 protected:
 
     // the maximum length of phrase to be generated from the base measures
-    int maxLen_;
+    int maxLen_e_;
+    int maxLen_f_;
 
     // model probabilities
     PyDist< int,PyDenseIndex<int> > phrases_;
@@ -171,7 +172,7 @@ public:
         return ret;
     }
 
-	virtual void setMaxLen(int maxLen) { maxLen_ = maxLen; }
+	virtual void setMaxLen(int maxLenE, int maxLenF) { maxLen_e_ = maxLenE; maxLen_f_ = maxLenF;}
 
     bool getRememberNull() { return rememberNull_; }
     void setRememberNull(bool rememberNull) { rememberNull_ = rememberNull; }

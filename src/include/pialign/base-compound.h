@@ -69,9 +69,9 @@ public:
         dist_ = DirichletDist<int>(1.0,measures_.size());
     }
 
-    void trainPoisson(Prob avgLen, Prob nullProb) {
+    void trainPoisson(Prob avgLenE, Prob nullProbE, Prob avgLenF, Prob nullProbF) {
         for(unsigned i = 0; i < measures_.size(); i++)
-            measures_[i]->trainPoisson(avgLen,nullProb);
+            measures_[i]->trainPoisson(avgLenE,nullProbE,avgLenF,nullProbF);
     }
 
     void trainUnigrams(const Corpus & es, int eSize, const Corpus & fs, int fSize) {
@@ -84,12 +84,14 @@ public:
         for(unsigned i = 0; i < measures_.size(); i++)
             measures_[i]->setDebug(debug);
     }
-    void setMaxLen(int maxLen) { 
-        maxLen_ = maxLen;
+    void setMaxLen(int maxLenE, int maxLenF) { 
+        maxLen_e_ = maxLenE;
+        maxLen_f_ = maxLenF;
         for(unsigned i = 0; i < measures_.size(); i++)
-            measures_[i]->setMaxLen(maxLen);
+            measures_[i]->setMaxLen(maxLenE, maxLenF);
     }
-    int getMaxLen() const { return maxLen_; }
+    int getMaxLenE() const { return maxLen_e_; }
+    int getMaxLenF() const { return maxLen_f_; }
 
     virtual SpanProbMap * getBaseChart(const WordString & e, const WordString & f) const;
 

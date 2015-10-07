@@ -100,7 +100,8 @@ protected:
     bool shuffle_;         // shuffle the order of sentences for sampling
     int wordIters_;        // the number number of iterations to do with the word-based model (0)
     Prob annealLevel_;     // the current level of annealing
-    int maxPhraseLen_;     // the maximum phrase size  
+    int maxPhraseLen_e_;   // the maximum phrase size (english side)
+    int maxPhraseLen_f_;   // the maximum phrase size (french side) 
     int printMax_;         // the maximum phrase size to print  
     int printMin_;         // the minimum phrase size to print  
     int maxSentLen_;       // the maximum size of a sentence  
@@ -117,8 +118,10 @@ protected:
     static const int MODEL_FLAT = 1;
     static const int MODEL_LENGTH = 2;
     bool forceWord_;        // force the aligner to generate at-most-one alignments (phrase alignments according to the model are bracketed with {}) 
-    Prob avgPhraseLen_;        // the average length of an E phrase (for flat models, default 1)
-    Prob nullProb_;            // the probability null values
+    Prob avgPhraseLen_e_;        // the average length of an E phrase (for flat models, default 1)
+    Prob avgPhraseLen_f_;        // the average length of an F phrase (for flat models, default 1)
+    Prob nullProb_e_;            // the probability null values for E side
+    Prob nullProb_f_;            // the probability null values for F side
     Prob termStrength_, termPrior_; // the strength of the type dist and prior of the terminal
     Prob defDisc_, defStren_; // the default discounts and strengths of the Pitman-Yor process
     
@@ -141,7 +144,8 @@ protected:
     // buffers and constants
     bool onSample_; // whether we are currently calculating a sample or not
     std::vector<Prob> patternBuffer_; // a buffer holding the log probabilities of each pattern type
-    std::vector<Prob> poisProbs_; // a buffer holding the log probabilities of the Poisson dist
+    std::vector<Prob> poisProbs_e_; // a buffer holding the log probabilities of the Poisson dist
+    std::vector<Prob> poisProbs_f_; // a buffer holding the log probabilities of the Poisson dist
     std::vector<BuildJob> buildJobs_; // sample building jobs
 
     // the base distribution
@@ -175,9 +179,10 @@ public:
     PIAlign() : samples_(1), sampRate_(1), burnIn_(9),
         babySteps_(1), babyStepLen_(0), annealSteps_(1), annealStepLen_(0), 
         batchLen_(1), numThreads_(1), shuffle_(true), wordIters_(0),
-        maxPhraseLen_(3), printMax_(7), printMin_(1), maxSentLen_(40), probWidth_(1e-4),
+        maxPhraseLen_e_(3), maxPhraseLen_f_(3), printMax_(7), printMin_(1), maxSentLen_(40), probWidth_(1e-4),
         useQueue_(false), viterbi_(false), lookType_(LOOK_IND),
-        modelType_(MODEL_HIER), forceWord_(true), avgPhraseLen_(0.01), nullProb_(0.01), 
+        modelType_(MODEL_HIER), forceWord_(true), avgPhraseLen_e_(0.01), nullProb_e_(0.01),
+        avgPhraseLen_f_(0.01), nullProb_f_(0.01), 
         termStrength_(1), termPrior_(1.0/3.0),
         defDisc_(-1), defStren_(-1),
         baseType_(BASE_MODEL1G), monotonic_(false), doReject_(false),
