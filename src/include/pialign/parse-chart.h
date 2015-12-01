@@ -89,8 +89,8 @@ public:
 #ifdef DEBUG_ON
         if( p <= NEG_INFINITY || p > 0 )
             throw std::runtime_error("ParseChart Attempted to add illegal probability");
-        if(debug_)
-            std::cerr << "addToChart(Span("<<s<<","<<t<<","<<u<<","<<v<<"), "<<p<<") == " << (*this)[idx] <<std::endl;
+        // if(debug_)
+        //     std::cerr << "addToChart(Span("<<s<<","<<t<<","<<u<<","<<v<<"), "<<p<<") == " << (*this)[idx] <<std::endl;
 #endif
         return ret;
     }
