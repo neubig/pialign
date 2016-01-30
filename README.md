@@ -25,6 +25,10 @@ First, `configure` and `make` the program:
     $ ./configure
     $ make
 
+#### C++11 Support
+
+This project includes C++11 code and you will need a compliant compiler. You may need to add a specific flag to your compiler, something like -std=c++11, check with your compiler's reference documentation.
+
 ### Run
 
 Then, to align a file, say we have a source language file `data/f.txt` and a target language file `data/e.txt`, we can run the program as follows:
