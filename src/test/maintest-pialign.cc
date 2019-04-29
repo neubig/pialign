@@ -50,7 +50,7 @@ SpanNode * getSpanNode() {
 
 // test various models
 int testModel(ProbModel & mod, int phraseCount) {
-    mod.setMaxLen(4);
+    mod.setMaxLen(4, 4);
     WordString e = makeWS(4), f = makeWS(3);
     BaseUnigram base;
     StringWordSet ep, fp;
@@ -85,7 +85,7 @@ int testModel(ProbModel & mod, int phraseCount) {
 
 // test various models
 int testMatch(ProbModel & mod) {
-    mod.setMaxLen(4);
+    mod.setMaxLen(4, 4);
     WordString e = makeWS(4), f = makeWS(3);
     BaseUnigram base;
     StringWordSet ep, fp;

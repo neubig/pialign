@@ -62,7 +62,7 @@
 #define PACKAGE_NAME "pialign"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "pialign 0.2.4"
+#define PACKAGE_STRING "pialign 0.2.5"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "pialign"
@@ -71,13 +71,13 @@
 #define PACKAGE_URL ""
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "0.2.4"
+#define PACKAGE_VERSION "0.2.5"
 
 /* Define to 1 if you have the ANSI C header files. */
 #define STDC_HEADERS 1
 
 /* Version number of package */
-#define VERSION "0.2.4"
+#define VERSION "0.2.5"
 
 /* Enable large inode numbers on Mac OS X 10.5.  */
 #ifndef _DARWIN_USE_64_BIT_INODE

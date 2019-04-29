@@ -12,7 +12,6 @@
 // enables compression
 // #define COMPRESS_ON
 
-#include "port/port.h"
 #include "gng/string.h"
 #include "gng/symbol-set.h"
 #include "gng/symbol-map.h"
