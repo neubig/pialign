@@ -13,7 +13,9 @@ AC_CONFIG_FILES([
     src/bin/Makefile
     src/test/Makefile
 ])
+AC_CONFIG_MACRO_DIRS([m4])
 
+AM_PROG_AR()
 AM_INIT_AUTOMAKE([-Wall])
 
 # Uncomment to disable shared libraries (for example, for debugging)

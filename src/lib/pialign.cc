@@ -659,7 +659,7 @@ pair<SpanNode*,Prob> PIAlign::sampleTree(int sent, const Span & mySpan, const Pa
     myNode->left = lPair.first;
     pair<SpanNode*,Prob> rPair = sampleTree(sent,myPair.second,chart,genChart,baseChart,add,(actNode?actNode->right:0));
     myNode->right = rPair.first;
-    if(myNode->left < 0 || myNode->right < 0)
+    if(myNode->left == NULL || myNode->right == NULL)
         throw std::runtime_error("Decompose but no child sample");
 
     return pair<SpanNode*,Prob>(myNode,ansProb+lPair.second+rPair.second);

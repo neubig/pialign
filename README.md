@@ -22,6 +22,7 @@ Quick Start
 
 First, `configure` and `make` the program:
 
+    $ autoreconf -i
     $ ./configure
     $ make
 
